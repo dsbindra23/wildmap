@@ -1,26 +1,67 @@
 @import "tailwindcss";
 
+/* ── Design tokens ───────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg:        #ffffff;
+  --bg-2:      #f5f5f5;
+  --bg-3:      #efefef;
+  --fg:        #252525;
+  --fg-2:      #545454;
+  --fg-3:      #7D7D7D;
+  --border:    #CFCFCF;
+  --border-2:  #545454;
+  --accent:    #252525;
+  --accent-fg: #ffffff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+.dark {
+  --bg:        #161616;
+  --bg-2:      #1e1e1e;
+  --bg-3:      #252525;
+  --fg:        #CFCFCF;
+  --fg-2:      #9D9D9D;
+  --fg-3:      #7D7D7D;
+  --border:    #2e2e2e;
+  --border-2:  #545454;
+  --accent:    #CFCFCF;
+  --accent-fg: #252525;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ── Base ────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html { height: 100%; }
+
+body {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* ── Utility classes ────────────────────────────────────────── */
+@layer utilities {
+  .bg-base       { background-color: var(--bg); }
+  .bg-surface    { background-color: var(--bg-2); }
+  .bg-muted      { background-color: var(--bg-3); }
+  .text-base     { color: var(--fg); }
+  .text-secondary{ color: var(--fg-2); }
+  .text-muted    { color: var(--fg-3); }
+  .border-base   { border-color: var(--border); }
+  .border-strong { border-color: var(--border-2); }
+  .btn-primary {
+    background-color: var(--accent);
+    color: var(--accent-fg);
+  }
+  .btn-primary:hover {
+    opacity: 0.88;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+/* ── Leaflet fix ─────────────────────────────────────────────── */
+.leaflet-container { z-index: 0; }
