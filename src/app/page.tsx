@@ -1,73 +1,109 @@
 import OriginSearch from "@/components/OriginSearch";
 import Link from "next/link";
 
+const STATS = [
+  { value: "80+", label: "Destinations" },
+  { value: "$0.01", label: "Base Fare" },
+  { value: "28", label: "Days of Fares" },
+  { value: "Free", label: "To Use" },
+];
+
+const FEATURES = [
+  {
+    href: "/app",
+    color: "var(--beach)",
+    label: "Explore",
+    desc: "Search flights from any GoWild city to any destination.",
+  },
+  {
+    href: "/app/map",
+    color: "var(--mountain)",
+    label: "Destination Map",
+    desc: "Every airport you can reach, plotted live with current fares.",
+  },
+  {
+    href: "/app/calendar",
+    color: "var(--city)",
+    label: "Fare Calendar",
+    desc: "Browse 28 days at a glance and find the cheapest dates to fly.",
+  },
+  {
+    href: "/gowild-destinations.html",
+    color: "var(--desert)",
+    label: "All Destinations",
+    desc: "Every GoWild destination filtered by vibe — beach, mountain, city and more.",
+  },
+];
+
 export default function Home() {
   return (
     <div>
-      {/* Hero — fully centered */}
-      <section className="flex flex-col items-center text-center px-5 pt-28 pb-24">
-        <p className="text-xs font-medium uppercase tracking-widest mb-5" style={{ color: "var(--fg-3)" }}>
-          Frontier GoWild Pass
+      {/* Hero */}
+      <section
+        className="flex flex-col items-center text-center px-5 pt-24 pb-16"
+        style={{ borderBottom: "1px solid var(--border)", background: "linear-gradient(180deg, rgba(0,212,180,0.05) 0%, transparent 100%)" }}
+      >
+        <p style={{ fontFamily: "var(--font-bebas)", fontSize: 11, letterSpacing: "0.35em", color: "var(--beach)", marginBottom: 18, opacity: 0.9 }}>
+          GoWild Pass — Unofficial Companion
         </p>
         <h1
-          className="text-5xl sm:text-6xl font-bold tracking-tight mb-5 leading-tight"
-          style={{ color: "var(--fg)" }}
+          style={{ fontFamily: "var(--font-serif)", fontSize: "clamp(42px, 8vw, 80px)", fontWeight: 900, lineHeight: 1.05, color: "var(--fg)", marginBottom: 18 }}
         >
-          Explore where<br />you can fly
+          Every Destination,<br />One Pass
         </h1>
-        <p
-          className="text-base max-w-sm mb-10 leading-relaxed"
-          style={{ color: "var(--fg-2)" }}
-        >
-          Enter your departure city and see every destination reachable with your GoWild pass.
+        <p className="text-sm max-w-sm leading-relaxed mb-10" style={{ color: "var(--fg-2)" }}>
+          Search every Frontier GoWild flight, browse 28-day fare calendars, and book in one tap.
         </p>
         <div className="w-full max-w-md">
           <OriginSearch />
         </div>
       </section>
 
-      {/* Two feature links */}
-      <div style={{ borderTop: "1px solid var(--border)" }}>
-        <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-px" style={{ backgroundColor: "var(--border)" }}>
-          {[
-            {
-              href: "/app/map",
-              label: "Destination map",
-              desc: "Every airport you can reach, plotted live with current fares.",
-            },
-            {
-              href: "/app/calendar",
-              label: "Fare calendar",
-              desc: "Browse 28 days at a glance and find the cheapest dates to fly.",
-            },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="block p-8 text-center transition-opacity hover:opacity-70"
-              style={{ backgroundColor: "var(--bg)" }}
-            >
-              <div className="text-sm font-semibold mb-1.5" style={{ color: "var(--fg)" }}>
-                {item.label} →
-              </div>
-              <p className="text-sm leading-relaxed" style={{ color: "var(--fg-3)" }}>
-                {item.desc}
-              </p>
-            </Link>
-          ))}
-        </div>
+      {/* Stats bar */}
+      <div className="flex justify-center" style={{ borderBottom: "1px solid var(--border)", backgroundColor: "var(--bg-2)" }}>
+        {STATS.map((s, i) => (
+          <div
+            key={s.label}
+            className="flex-1 py-5 text-center"
+            style={{ maxWidth: 180, borderRight: i < STATS.length - 1 ? "1px solid var(--border)" : "none" }}
+          >
+            <div style={{ fontFamily: "var(--font-bebas)", fontSize: 30, letterSpacing: "0.05em", color: "var(--fg)" }}>{s.value}</div>
+            <div style={{ fontFamily: "var(--font-bebas)", fontSize: 9, letterSpacing: "0.2em", color: "var(--fg-3)", marginTop: 2 }}>{s.label}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Bottom CTA — centered */}
-      <div style={{ borderTop: "1px solid var(--border)" }}>
-        <div className="flex flex-col items-center text-center px-5 py-16 gap-4">
-          <div className="font-semibold text-base" style={{ color: "var(--fg)" }}>Free to use</div>
+      {/* Feature cards */}
+      <div className="max-w-4xl mx-auto px-5 py-14 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {FEATURES.map((f) => (
+          <Link
+            key={f.href}
+            href={f.href}
+            className="block rounded-xl border p-6 transition-all hover:opacity-80"
+            style={{ borderColor: "var(--border)", borderLeftColor: f.color, borderLeftWidth: 4, backgroundColor: "var(--bg-2)" }}
+          >
+            <div style={{ fontFamily: "var(--font-bebas)", letterSpacing: "0.12em", fontSize: 16, color: f.color, marginBottom: 6 }}>
+              {f.label} →
+            </div>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--fg-3)" }}>{f.desc}</p>
+          </Link>
+        ))}
+      </div>
+
+      {/* CTA strip */}
+      <div style={{ borderTop: "1px solid var(--border)", backgroundColor: "var(--bg-2)" }}>
+        <div className="flex flex-col items-center text-center px-5 py-14 gap-4">
+          <p style={{ fontFamily: "var(--font-bebas)", fontSize: 11, letterSpacing: "0.3em", color: "var(--beach)" }}>Free to use</p>
+          <h2 style={{ fontFamily: "var(--font-serif)", fontSize: 32, fontWeight: 700, color: "var(--fg)", lineHeight: 1.1 }}>
+            Save your home airport
+          </h2>
           <p className="text-sm max-w-xs" style={{ color: "var(--fg-3)" }}>
-            No subscription needed. Create an account to save your home airport.
+            Create a free account to save your departure city and preferences.
           </p>
           <Link
             href="/auth/register"
-            className="mt-1 px-5 py-2.5 rounded-lg text-sm font-medium btn-primary transition-opacity hover:opacity-80"
+            className="mt-2 px-6 py-2.5 rounded-lg btn-primary transition-opacity hover:opacity-80"
+            style={{ fontSize: 14 }}
           >
             Create an account
           </Link>

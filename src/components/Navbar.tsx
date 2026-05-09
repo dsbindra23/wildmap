@@ -2,77 +2,71 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { useTheme } from "@/components/ThemeProvider";
-import { Sun, Moon, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
   const { data: session } = useSession();
-  const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
 
   return (
-    <header style={{ borderBottom: "1px solid var(--border)", backgroundColor: "var(--bg)" }} className="sticky top-0 z-50">
+    <header
+      style={{
+        borderBottom: "1px solid var(--border)",
+        backgroundColor: "rgba(6,13,26,0.92)",
+        backdropFilter: "blur(12px)",
+      }}
+      className="sticky top-0 z-50"
+    >
       <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
 
-        <Link href="/" className="font-semibold text-base tracking-tight" style={{ color: "var(--fg)" }}>
+        <Link href="/" style={{ fontFamily: "var(--font-bebas, 'Bebas Neue')", fontSize: 22, color: "var(--fg)", letterSpacing: "0.15em" }}>
           WildMap
         </Link>
 
-        <nav className="hidden md:flex items-center gap-7 text-sm" style={{ color: "var(--fg-2)" }}>
-          <Link href="/app" className="hover:opacity-70 transition-opacity">Explore</Link>
-          <Link href="/app/map" className="hover:opacity-70 transition-opacity">Map</Link>
-          <Link href="/app/calendar" className="hover:opacity-70 transition-opacity">Calendar</Link>
-          <Link href="/faq" className="hover:opacity-70 transition-opacity">FAQ</Link>
+        <nav className="hidden md:flex items-center gap-8" style={{ fontFamily: "var(--font-bebas, 'Bebas Neue')", letterSpacing: "0.12em", fontSize: 14 }}>
+          <Link href="/app" className="hover:opacity-70 transition-opacity" style={{ color: "var(--fg-2)" }}>Explore</Link>
+          <Link href="/app/map" className="hover:opacity-70 transition-opacity" style={{ color: "var(--fg-2)" }}>Map</Link>
+          <Link href="/app/calendar" className="hover:opacity-70 transition-opacity" style={{ color: "var(--fg-2)" }}>Calendar</Link>
+          <Link href="/faq" className="hover:opacity-70 transition-opacity" style={{ color: "var(--fg-2)" }}>FAQ</Link>
         </nav>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={toggle}
-            aria-label="Toggle theme"
-            className="w-8 h-8 flex items-center justify-center rounded-lg transition-opacity hover:opacity-70"
-            style={{ color: "var(--fg-3)" }}
-          >
-            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-
-          <div className="hidden md:flex items-center gap-3 text-sm">
-            {session ? (
-              <>
-                <Link href="/settings" className="hover:opacity-70 transition-opacity" style={{ color: "var(--fg-2)" }}>
-                  {session.user?.name?.split(" ")[0] || "Account"}
-                </Link>
-                <button
-                  onClick={() => signOut()}
-                  className="px-3 py-1.5 rounded-lg text-sm border transition-opacity hover:opacity-70"
-                  style={{ borderColor: "var(--border)", color: "var(--fg-2)" }}
-                >
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/auth/login" className="hover:opacity-70 transition-opacity" style={{ color: "var(--fg-2)" }}>
-                  Sign in
-                </Link>
-                <Link
-                  href="/auth/register"
-                  className="px-3 py-1.5 rounded-lg text-sm font-medium transition-opacity hover:opacity-80 btn-primary"
-                >
-                  Get started
-                </Link>
-              </>
-            )}
-          </div>
-
-          <button className="md:hidden" onClick={() => setOpen(!open)} style={{ color: "var(--fg-2)" }}>
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+        <div className="hidden md:flex items-center gap-3">
+          {session ? (
+            <>
+              <Link href="/settings" className="hover:opacity-70 transition-opacity" style={{ fontFamily: "var(--font-bebas)", letterSpacing: "0.1em", fontSize: 14, color: "var(--fg-2)" }}>
+                {session.user?.name?.split(" ")[0] || "Account"}
+              </Link>
+              <button
+                onClick={() => signOut()}
+                className="px-3 py-1.5 rounded-lg border transition-opacity hover:opacity-70"
+                style={{ fontFamily: "var(--font-bebas)", letterSpacing: "0.1em", fontSize: 13, borderColor: "var(--border-2)", color: "var(--fg-2)" }}
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/auth/login" className="hover:opacity-70 transition-opacity" style={{ fontFamily: "var(--font-bebas)", letterSpacing: "0.1em", fontSize: 14, color: "var(--fg-2)" }}>
+                Sign in
+              </Link>
+              <Link href="/auth/register" className="px-4 py-1.5 rounded-lg transition-opacity hover:opacity-80 btn-primary" style={{ fontSize: 13 }}>
+                Get started
+              </Link>
+            </>
+          )}
         </div>
+
+        <button className="md:hidden" onClick={() => setOpen(!open)} style={{ color: "var(--fg-2)" }}>
+          {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
       </div>
 
       {open && (
-        <div className="md:hidden border-t px-5 py-4 space-y-3 text-sm" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg)" }}>
+        <div
+          className="md:hidden border-t px-5 py-4 space-y-4"
+          style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-2)", fontFamily: "var(--font-bebas)", letterSpacing: "0.12em", fontSize: 15 }}
+        >
           <Link href="/app" className="block" style={{ color: "var(--fg-2)" }} onClick={() => setOpen(false)}>Explore</Link>
           <Link href="/app/map" className="block" style={{ color: "var(--fg-2)" }} onClick={() => setOpen(false)}>Map</Link>
           <Link href="/app/calendar" className="block" style={{ color: "var(--fg-2)" }} onClick={() => setOpen(false)}>Calendar</Link>
@@ -82,7 +76,7 @@ export default function Navbar() {
           ) : (
             <>
               <Link href="/auth/login" className="block" style={{ color: "var(--fg-2)" }} onClick={() => setOpen(false)}>Sign in</Link>
-              <Link href="/auth/register" className="block font-medium" style={{ color: "var(--fg)" }} onClick={() => setOpen(false)}>Get started</Link>
+              <Link href="/auth/register" className="block" style={{ color: "var(--beach)" }} onClick={() => setOpen(false)}>Get started</Link>
             </>
           )}
         </div>

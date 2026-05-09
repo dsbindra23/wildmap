@@ -1,6 +1,6 @@
 "use client";
 
-import { formatTime, formatDuration, formatPrice } from "@/lib/utils";
+import { formatTime, formatDuration } from "@/lib/utils";
 import type { SearchResult } from "@/lib/duffel";
 
 interface FlightCardProps {
@@ -13,50 +13,56 @@ export default function FlightCard({ flight }: FlightCardProps) {
 
   return (
     <div
-      className="flex items-center justify-between gap-4 px-5 py-4 rounded-xl border transition-opacity hover:opacity-80"
-      style={{ borderColor: "var(--border)", backgroundColor: "var(--bg)" }}
+      className="flex items-center gap-4 px-5 py-4 rounded-xl border transition-all hover:opacity-90"
+      style={{
+        borderColor: "var(--border)",
+        borderLeftColor: "var(--beach)",
+        borderLeftWidth: 4,
+        backgroundColor: "var(--bg-2)",
+      }}
     >
-      {/* Airline */}
-      <div className="hidden sm:block w-16 shrink-0">
-        <div className="text-xs font-semibold" style={{ color: "var(--fg)" }}>{flight.airlineCode}</div>
-        <div className="text-xs truncate" style={{ color: "var(--fg-3)" }}>{flight.airline}</div>
+      {/* Airline code */}
+      <div className="hidden sm:block shrink-0" style={{ minWidth: 52 }}>
+        <div style={{ fontFamily: "var(--font-bebas)", letterSpacing: "0.12em", fontSize: 18, color: "var(--fg)" }}>{flight.airlineCode}</div>
+        <div className="text-xs truncate" style={{ color: "var(--fg-3)", maxWidth: 56 }}>{flight.airline}</div>
       </div>
 
       {/* Route */}
       <div className="flex-1 flex items-center gap-4 min-w-0">
         <div className="text-center shrink-0">
-          <div className="text-base font-semibold tabular-nums" style={{ color: "var(--fg)" }}>{formatTime(flight.departureTime)}</div>
-          <div className="text-xs font-medium" style={{ color: "var(--fg-3)" }}>{flight.origin}</div>
+          <div className="tabular-nums" style={{ fontFamily: "var(--font-bebas)", fontSize: 26, letterSpacing: "0.05em", color: "var(--fg)", lineHeight: 1 }}>{flight.origin}</div>
+          <div className="text-xs mt-0.5" style={{ color: "var(--fg-3)" }}>{formatTime(flight.departureTime)}</div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
-          <div className="text-xs" style={{ color: "var(--fg-3)" }}>{formatDuration(flight.duration)}</div>
+        <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+          <div className="text-xs" style={{ color: "var(--fg-2)" }}>{formatDuration(flight.duration)}</div>
           <div className="w-full flex items-center gap-1">
-            <div className="flex-1 h-px" style={{ backgroundColor: "var(--border)" }} />
-            <div className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: "var(--fg-3)" }} />
+            <div className="flex-1 h-px" style={{ backgroundColor: "var(--border-2)" }} />
+            <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: "var(--beach)" }} />
           </div>
-          <div className="text-xs" style={{ color: "var(--fg-3)" }}>{stops}</div>
+          <div className="text-xs" style={{ color: "var(--fg-3)", fontFamily: "var(--font-bebas)", letterSpacing: "0.08em" }}>{stops}</div>
         </div>
 
         <div className="text-center shrink-0">
-          <div className="text-base font-semibold tabular-nums" style={{ color: "var(--fg)" }}>{formatTime(flight.arrivalTime)}</div>
-          <div className="text-xs font-medium" style={{ color: "var(--fg-3)" }}>{flight.destination}</div>
+          <div className="tabular-nums" style={{ fontFamily: "var(--font-bebas)", fontSize: 26, letterSpacing: "0.05em", color: "var(--fg)", lineHeight: 1 }}>{flight.destination}</div>
+          <div className="text-xs mt-0.5" style={{ color: "var(--fg-3)" }}>{formatTime(flight.arrivalTime)}</div>
         </div>
       </div>
 
       {/* Price + book */}
       <div className="shrink-0 flex items-center gap-4">
         <div className="text-right">
-          <div className="text-lg font-bold tabular-nums" style={{ color: "var(--fg)" }}>
-            {formatPrice(flight.price, flight.currency)}
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 500, color: "var(--orange)", lineHeight: 1 }}>
+            $0.01
           </div>
-          <div className="text-xs" style={{ color: "var(--fg-3)" }}>per person</div>
+          <div className="text-xs mt-0.5" style={{ color: "var(--fg-3)" }}>+ ~$30 taxes</div>
         </div>
         <a
           href={frontierUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-medium px-3 py-2 rounded-lg btn-primary transition-opacity hover:opacity-80 whitespace-nowrap"
+          className="btn-primary transition-opacity hover:opacity-80 whitespace-nowrap"
+          style={{ padding: "9px 15px", borderRadius: 7, fontSize: 13 }}
         >
           Book →
         </a>

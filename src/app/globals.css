@@ -2,29 +2,29 @@
 
 /* ── Design tokens ───────────────────────────────────────────── */
 :root {
-  --bg:        #ffffff;
-  --bg-2:      #f5f5f5;
-  --bg-3:      #efefef;
-  --fg:        #252525;
-  --fg-2:      #545454;
-  --fg-3:      #7D7D7D;
-  --border:    #CFCFCF;
-  --border-2:  #545454;
-  --accent:    #252525;
-  --accent-fg: #ffffff;
-}
+  --navy:      #060d1a;
+  --navy-2:    #0d1b2e;
+  --navy-3:    #0f1e30;
+  --navy-4:    #152437;
+  --bg:        #060d1a;
+  --bg-2:      #0d1b2e;
+  --bg-3:      #0f1e30;
+  --bg-4:      #152437;
+  --fg:        #e8f0f8;
+  --fg-2:      #8ba0b8;
+  --fg-3:      #4a6280;
+  --border:    rgba(255,255,255,0.07);
+  --border-2:  rgba(255,255,255,0.14);
+  --accent:    #e8f0f8;
+  --accent-fg: #060d1a;
 
-.dark {
-  --bg:        #161616;
-  --bg-2:      #1e1e1e;
-  --bg-3:      #252525;
-  --fg:        #CFCFCF;
-  --fg-2:      #9D9D9D;
-  --fg-3:      #7D7D7D;
-  --border:    #2e2e2e;
-  --border-2:  #545454;
-  --accent:    #CFCFCF;
-  --accent-fg: #252525;
+  /* vibe colors */
+  --beach:     #00d4b4;
+  --mountain:  #4a90d9;
+  --city:      #ff6b35;
+  --desert:    #f5b041;
+  --heartland: #a8c97f;
+  --orange:    #ff7a1a;
 }
 
 /* ── Base ────────────────────────────────────────────────────── */
@@ -36,12 +36,15 @@ body {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg);
+  background-color: var(--navy);
+  background-image:
+    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+  background-size: 40px 40px;
   color: var(--fg);
-  font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
+  font-family: var(--font-mono), 'DM Mono', monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 /* ── Utility classes ────────────────────────────────────────── */
@@ -55,12 +58,15 @@ body {
   .border-base   { border-color: var(--border); }
   .border-strong { border-color: var(--border-2); }
   .btn-primary {
-    background-color: var(--accent);
-    color: var(--accent-fg);
+    background-color: var(--fg);
+    color: var(--navy);
+    font-family: var(--font-bebas), 'Bebas Neue', sans-serif;
+    letter-spacing: 0.1em;
   }
-  .btn-primary:hover {
-    opacity: 0.88;
-  }
+  .btn-primary:hover { opacity: 0.82; }
+  .font-bebas  { font-family: var(--font-bebas), 'Bebas Neue', sans-serif; }
+  .font-serif  { font-family: var(--font-serif), 'Playfair Display', serif; }
+  .font-mono   { font-family: var(--font-mono), 'DM Mono', monospace; }
 }
 
 /* ── Leaflet fix ─────────────────────────────────────────────── */
