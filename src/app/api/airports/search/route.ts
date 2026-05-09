@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import duffel from "@/lib/duffel";
+import { rateLimit } from "@/lib/ratelimit";
 
 // Preferred IATA code for major metro areas (city name → main airport)
 const PREFERRED: Record<string, string> = {
@@ -71,9 +72,13 @@ function pickBestAirport(
 }
 
 export async function GET(req: NextRequest) {
-  const query = req.nextUrl.searchParams.get("q") || "";
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  if (!rateLimit(ip, 60, 60_000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
-  if (query.length < 2) {
+  const query = req.nextUrl.searchParams.get("q") || "";
+  if (query.length < 2 || query.length > 100) {
     return NextResponse.json({ results: [] });
   }
 
