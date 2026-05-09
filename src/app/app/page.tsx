@@ -17,7 +17,7 @@ const POPULAR_DESTINATIONS = [
 ];
 
 // Vibe lookup for color-coded cards
-const VIBE: Record<string, { color: string; label: string }> = {
+const VIBE: Record<string, string> = {
   FLL:"beach",MIA:"beach",TPA:"beach",MCO:"city",PBI:"beach",RSW:"beach",SRQ:"beach",CHS:"beach",JAX:"beach",
   SAN:"beach",SNA:"beach",SJU:"beach",CUN:"beach",MZT:"beach",PVR:"beach",SJD:"beach",PUJ:"beach",SDQ:"beach",ORF:"beach",
   DEN:"mountain",SLC:"mountain",BOI:"mountain",RNO:"mountain",SEA:"mountain",PDX:"mountain",GEG:"mountain",
