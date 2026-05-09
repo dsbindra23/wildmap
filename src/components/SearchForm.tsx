@@ -4,18 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MapPin, Calendar, Users, ArrowLeftRight } from "lucide-react";
 
-interface Airport {
-  iataCode: string;
-  name: string;
-  city: string;
-  country: string;
-}
-
-interface SearchFormProps {
-  onSearch?: (params: SearchParams) => void;
-  compact?: boolean;
-  initialValues?: Partial<SearchParams>;
-}
+interface Airport { iataCode: string; name: string; city: string; }
 
 export interface SearchParams {
   origin: string;
@@ -24,6 +13,12 @@ export interface SearchParams {
   destinationName: string;
   date: string;
   passengers: number;
+}
+
+interface SearchFormProps {
+  onSearch?: (params: SearchParams) => void;
+  compact?: boolean;
+  initialValues?: Partial<SearchParams>;
 }
 
 function AirportInput({
@@ -45,16 +40,14 @@ function AirportInput({
   const timeout = useRef<NodeJS.Timeout | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setQuery(displayValue || value);
-  }, [displayValue, value]);
+  useEffect(() => { setQuery(displayValue || value); }, [displayValue, value]);
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
+    const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const handleChange = (q: string) => {
@@ -66,38 +59,41 @@ function AirportInput({
       const data = await res.json();
       setResults(data.results || []);
       setOpen(true);
-    }, 300);
+    }, 280);
   };
 
-  const select = (airport: Airport) => {
-    setQuery(`${airport.city} (${airport.iataCode})`);
-    onChange(airport.iataCode, `${airport.city} (${airport.iataCode})`);
+  const select = (a: Airport) => {
+    setQuery(`${a.city} (${a.iataCode})`);
+    onChange(a.iataCode, `${a.city} (${a.iataCode})`);
     setOpen(false);
+    setResults([]);
   };
 
   return (
     <div className="relative flex-1" ref={ref}>
-      <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">{label}</label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</span>
+      <label className="block text-xs mb-1.5" style={{ color: "var(--fg-3)" }}>{label}</label>
+      <div className="relative flex items-center gap-2 px-3 py-2.5 rounded-lg border"
+        style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-2)" }}>
+        <span style={{ color: "var(--fg-3)" }}>{icon}</span>
         <input
-          className="w-full pl-9 pr-3 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
-          placeholder={`City or airport...`}
+          className="flex-1 bg-transparent outline-none text-sm placeholder:opacity-50"
+          style={{ color: "var(--fg)" }}
+          placeholder="City or airport..."
           value={query}
           onChange={(e) => handleChange(e.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
         />
       </div>
       {open && results.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full rounded-xl border shadow-lg overflow-hidden"
+          style={{ borderColor: "var(--border)", backgroundColor: "var(--bg)" }}>
           {results.map((a) => (
-            <button
-              key={a.iataCode}
-              className="w-full text-left px-4 py-3 hover:bg-indigo-50 text-sm transition-colors flex items-center gap-3"
-              onClick={() => select(a)}
-            >
-              <span className="font-bold text-indigo-600 w-10 shrink-0">{a.iataCode}</span>
-              <span className="text-gray-700 truncate">{a.name}</span>
+            <button key={a.iataCode} type="button"
+              className="w-full text-left px-4 py-3 text-sm flex items-center gap-3 hover:opacity-70 transition-opacity border-b last:border-0"
+              style={{ borderColor: "var(--border)", color: "var(--fg)" }}
+              onClick={() => select(a)}>
+              <span className="font-semibold w-9 shrink-0" style={{ color: "var(--fg)" }}>{a.iataCode}</span>
+              <span className="truncate" style={{ color: "var(--fg-2)" }}>{a.city}</span>
             </button>
           ))}
         </div>
@@ -113,15 +109,12 @@ export default function SearchForm({ onSearch, compact, initialValues }: SearchF
   const [destination, setDestination] = useState(initialValues?.destination || "");
   const [destinationName, setDestinationName] = useState(initialValues?.destinationName || "");
   const today = new Date().toISOString().split("T")[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
-  const [date, setDate] = useState(initialValues?.date || tomorrow);
+  const [date, setDate] = useState(initialValues?.date || new Date(Date.now() + 86400000).toISOString().split("T")[0]);
   const [passengers, setPassengers] = useState(initialValues?.passengers || 1);
 
   const swap = () => {
-    setOrigin(destination);
-    setOriginName(destinationName);
-    setDestination(origin);
-    setDestinationName(originName);
+    setOrigin(destination); setOriginName(destinationName);
+    setDestination(origin); setDestinationName(originName);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -131,73 +124,59 @@ export default function SearchForm({ onSearch, compact, initialValues }: SearchF
     if (onSearch) {
       onSearch(params);
     } else {
-      const qs = new URLSearchParams({
+      router.push(`/app/results?${new URLSearchParams({
         origin, originName, destination, destinationName, date, passengers: String(passengers),
-      });
-      router.push(`/app/results?${qs}`);
+      })}`);
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit} className={`bg-white rounded-2xl shadow-lg border border-gray-100 ${compact ? "p-4" : "p-6"}`}>
-      <div className="flex flex-col md:flex-row gap-3 items-end">
-        <AirportInput
-          label="From"
-          value={origin}
-          displayValue={originName}
-          onChange={(iata, name) => { setOrigin(iata); setOriginName(name); }}
-          icon={<MapPin className="w-4 h-4" />}
-        />
+  const fieldStyle = {
+    borderColor: "var(--border)",
+    backgroundColor: "var(--bg-2)",
+    color: "var(--fg)",
+  };
 
-        <button
-          type="button"
-          onClick={swap}
-          className="hidden md:flex w-9 h-9 shrink-0 items-center justify-center bg-gray-100 hover:bg-indigo-100 rounded-full transition-colors mb-0.5"
-        >
-          <ArrowLeftRight className="w-4 h-4 text-gray-500" />
+  return (
+    <form onSubmit={handleSubmit}
+      className={`rounded-2xl border ${compact ? "p-4" : "p-6"}`}
+      style={{ borderColor: "var(--border)", backgroundColor: "var(--bg)" }}>
+      <div className="flex flex-col md:flex-row gap-3 items-end">
+        <AirportInput label="From" value={origin} displayValue={originName}
+          onChange={(iata, name) => { setOrigin(iata); setOriginName(name); }}
+          icon={<MapPin className="w-4 h-4" />} />
+
+        <button type="button" onClick={swap}
+          className="hidden md:flex w-9 h-9 shrink-0 mb-0.5 items-center justify-center rounded-full border hover:opacity-70 transition-opacity"
+          style={{ borderColor: "var(--border)", color: "var(--fg-2)", backgroundColor: "var(--bg-3)" }}>
+          <ArrowLeftRight className="w-4 h-4" />
         </button>
 
-        <AirportInput
-          label="To"
-          value={destination}
-          displayValue={destinationName}
+        <AirportInput label="To" value={destination} displayValue={destinationName}
           onChange={(iata, name) => { setDestination(iata); setDestinationName(name); }}
-          icon={<MapPin className="w-4 h-4" />}
-        />
+          icon={<MapPin className="w-4 h-4" />} />
 
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Date</label>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="date"
-              min={today}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full pl-9 pr-3 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
-            />
+          <label className="block text-xs mb-1.5" style={{ color: "var(--fg-3)" }}>Date</label>
+          <div className="relative flex items-center gap-2 px-3 py-2.5 rounded-lg border" style={fieldStyle}>
+            <Calendar className="w-4 h-4 shrink-0" style={{ color: "var(--fg-3)" }} />
+            <input type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)}
+              className="flex-1 bg-transparent outline-none text-sm" style={{ color: "var(--fg)" }} />
           </div>
         </div>
 
         <div className="w-24">
-          <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Travelers</label>
-          <div className="relative">
-            <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <select
-              value={passengers}
-              onChange={(e) => setPassengers(Number(e.target.value))}
-              className="w-full pl-9 pr-2 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 appearance-none"
-            >
-              {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}
+          <label className="block text-xs mb-1.5" style={{ color: "var(--fg-3)" }}>Travelers</label>
+          <div className="relative flex items-center gap-2 px-3 py-2.5 rounded-lg border" style={fieldStyle}>
+            <Users className="w-4 h-4 shrink-0" style={{ color: "var(--fg-3)" }} />
+            <select value={passengers} onChange={(e) => setPassengers(Number(e.target.value))}
+              className="flex-1 bg-transparent outline-none text-sm appearance-none" style={{ color: "var(--fg)" }}>
+              {[1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={!origin || !destination || !date}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl font-semibold text-sm transition-colors shrink-0"
-        >
+        <button type="submit" disabled={!origin || !destination || !date}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm btn-primary disabled:opacity-40 transition-opacity shrink-0">
           <Search className="w-4 h-4" />
           Search
         </button>

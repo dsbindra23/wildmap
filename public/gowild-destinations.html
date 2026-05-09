@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoWild Destinations — Frontier Airlines Pass</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy:    #060d1a;
+      --navy-2:  #0d1b2e;
+      --navy-3:  #0f1e30;
+      --navy-4:  #152437;
+      --border:  rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.14);
+      --text:    #e8f0f8;
+      --text2:   #8ba0b8;
+      --text3:   #4a6280;
+      --beach:     #00d4b4;
+      --mountain:  #4a90d9;
+      --city:      #ff6b35;
+      --desert:    #f5b041;
+      --heartland: #a8c97f;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Mono', monospace;
+      background-color: var(--navy);
+      background-image:
+        linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+      background-size: 40px 40px;
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 64px;
+    }
+
+    /* ── Header ── */
+    .header {
+      padding: 52px 24px 28px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(0,212,180,0.05) 0%, transparent 100%);
+    }
+    .header-eyebrow {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: var(--beach);
+      margin-bottom: 14px;
+      opacity: 0.85;
+    }
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(38px, 7vw, 76px);
+      font-weight: 900;
+      line-height: 1.05;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .header-sub {
+      font-size: 13px;
+      color: var(--text2);
+      max-width: 440px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      justify-content: center;
+      border-bottom: 1px solid var(--border);
+      background: var(--navy-2);
+    }
+    .stat-item {
+      flex: 1;
+      max-width: 180px;
+      padding: 18px 12px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 30px;
+      letter-spacing: 1px;
+      color: var(--text);
+    }
+    .stat-label {
+      font-size: 9px;
+      color: var(--text3);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 22px 24px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .search-input {
+      flex: 1;
+      min-width: 180px;
+      background: var(--navy-2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input::placeholder { color: var(--text3); }
+    .search-input:focus { border-color: rgba(255,255,255,0.28); }
+
+    .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-tab {
+      padding: 7px 13px;
+      border-radius: 20px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-tab:hover { color: var(--text); border-color: rgba(255,255,255,0.28); }
+    .filter-tab.active { color: var(--navy); font-weight: 700; }
+    .filter-tab[data-vibe="ALL"].active    { background: var(--text);      border-color: var(--text); }
+    .filter-tab[data-vibe="BEACH"].active  { background: var(--beach);     border-color: var(--beach); }
+    .filter-tab[data-vibe="MOUNTAIN"].active { background: var(--mountain); border-color: var(--mountain); }
+    .filter-tab[data-vibe="CITY"].active   { background: var(--city);      border-color: var(--city); }
+    .filter-tab[data-vibe="DESERT"].active { background: var(--desert);    border-color: var(--desert); }
+    .filter-tab[data-vibe="HEARTLAND"].active { background: var(--heartland); border-color: var(--heartland); }
+
+    .controls-right { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+    .view-toggle {
+      display: flex;
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .view-btn {
+      padding: 8px 16px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      background: transparent;
+      border: none;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .view-btn:first-child { border-right: 1px solid var(--border2); }
+    .view-btn.active { background: var(--navy-4); color: var(--text); }
+    .sort-select {
+      background: var(--navy-2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      color: var(--text2);
+      cursor: pointer;
+      outline: none;
+    }
+    .sort-select option { background: var(--navy-2); color: var(--text); }
+
+    /* ── Main ── */
+    .main { max-width: 1200px; margin: 0 auto; padding: 20px 24px; }
+    .result-count {
+      font-size: 10px;
+      color: var(--text3);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding-bottom: 16px;
+    }
+
+    /* ── Grid view ── */
+    .grid-view { display: flex; flex-direction: column; gap: 28px; }
+    .region-group { display: flex; flex-direction: column; gap: 14px; }
+    .region-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--text3);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 10px;
+    }
+    .dest-card {
+      background: var(--navy-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 16px 14px 20px;
+      border-left-width: 5px;
+      position: relative;
+      cursor: default;
+      transition: transform 0.15s, box-shadow 0.15s;
+      min-height: 136px;
+      display: flex;
+      flex-direction: column;
+    }
+    .dest-card:hover { transform: translateY(-2px); }
+    .dest-card[data-vibe="BEACH"]     { border-left-color: var(--beach); }
+    .dest-card[data-vibe="MOUNTAIN"]  { border-left-color: var(--mountain); }
+    .dest-card[data-vibe="CITY"]      { border-left-color: var(--city); }
+    .dest-card[data-vibe="DESERT"]    { border-left-color: var(--desert); }
+    .dest-card[data-vibe="HEARTLAND"] { border-left-color: var(--heartland); }
+    .dest-card[data-vibe="BEACH"]:hover     { box-shadow: 0 8px 28px rgba(0,212,180,0.13); }
+    .dest-card[data-vibe="MOUNTAIN"]:hover  { box-shadow: 0 8px 28px rgba(74,144,217,0.13); }
+    .dest-card[data-vibe="CITY"]:hover      { box-shadow: 0 8px 28px rgba(255,107,53,0.13); }
+    .dest-card[data-vibe="DESERT"]:hover    { box-shadow: 0 8px 28px rgba(245,176,65,0.13); }
+    .dest-card[data-vibe="HEARTLAND"]:hover { box-shadow: 0 8px 28px rgba(168,201,127,0.13); }
+
+    .card-iata {
+      position: absolute;
+      top: 13px;
+      right: 13px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 13px;
+      letter-spacing: 1.5px;
+      background: var(--navy-4);
+      color: var(--text2);
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border2);
+    }
+    .card-intl-badge {
+      position: absolute;
+      top: 38px;
+      right: 13px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 8px;
+      letter-spacing: 1px;
+      color: var(--beach);
+      opacity: 0.7;
+    }
+    .card-city {
+      font-family: 'Playfair Display', serif;
+      font-size: 21px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 4px;
+      padding-right: 50px;
+    }
+    .card-state { font-size: 11px; color: var(--text3); flex: 1; }
+    .card-vibe-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 12px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      align-self: flex-start;
+    }
+    .card-vibe-tag[data-vibe="BEACH"]     { background: rgba(0,212,180,0.1);   color: var(--beach); }
+    .card-vibe-tag[data-vibe="MOUNTAIN"]  { background: rgba(74,144,217,0.1);  color: var(--mountain); }
+    .card-vibe-tag[data-vibe="CITY"]      { background: rgba(255,107,53,0.1);  color: var(--city); }
+    .card-vibe-tag[data-vibe="DESERT"]    { background: rgba(245,176,65,0.1);  color: var(--desert); }
+    .card-vibe-tag[data-vibe="HEARTLAND"] { background: rgba(168,201,127,0.1); color: var(--heartland); }
+    .vibe-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+    /* ── List view ── */
+    .list-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .origin-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--text3);
+    }
+    .origin-select {
+      background: var(--navy-2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+    }
+    .origin-select option { background: var(--navy-2); }
+    .list-view { display: flex; flex-direction: column; gap: 8px; }
+    .flight-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--navy-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .flight-row:hover { border-color: var(--border2); background: var(--navy-3); }
+    .flight-airport { min-width: 96px; }
+    .airport-code {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      color: var(--text);
+      letter-spacing: 1px;
+      line-height: 1;
+    }
+    .airport-city { font-size: 10px; color: var(--text3); margin-top: 2px; }
+    .flight-line {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 80px;
+    }
+    .flight-duration { font-size: 10px; color: var(--text2); font-family: 'DM Mono', monospace; }
+    .flight-track { width: 100%; display: flex; align-items: center; gap: 4px; }
+    .track-line { flex: 1; height: 1px; background: var(--border2); }
+    .track-arrow {
+      width: 6px; height: 6px;
+      border-top: 1px solid var(--text3);
+      border-right: 1px solid var(--text3);
+      transform: rotate(45deg);
+    }
+    .flight-dest { min-width: 110px; }
+    .flight-vibe-tag {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      margin-top: 3px;
+    }
+    .flight-price { min-width: 68px; text-align: right; }
+    .price-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 22px;
+      font-weight: 500;
+      color: #ff7a1a;
+    }
+    .price-label { font-size: 9px; color: var(--text3); letter-spacing: 0.5px; }
+    .book-btn {
+      padding: 9px 15px;
+      background: var(--text);
+      color: var(--navy);
+      border: none;
+      border-radius: 7px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 13px;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    .book-btn:hover { opacity: 0.78; }
+
+    /* ── Empty state ── */
+    .empty-state { text-align: center; padding: 72px 20px; color: var(--text3); }
+    .empty-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      margin-bottom: 8px;
+      color: var(--text2);
+    }
+
+    /* ── View panels ── */
+    .view-panel { transition: opacity 0.2s ease; }
+
+    /* ── Disclaimer ── */
+    .disclaimer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(6,13,26,0.95);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border);
+      padding: 10px 24px;
+      font-size: 10px;
+      color: var(--text3);
+      text-align: center;
+      z-index: 100;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 640px) {
+      .controls-right { width: 100%; justify-content: space-between; }
+      .card-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+      .flight-row { padding: 12px; gap: 10px; }
+      .airport-code { font-size: 20px; }
+      .flight-dest { min-width: 80px; }
+      .price-value { font-size: 16px; }
+      .book-btn { padding: 7px 11px; font-size: 12px; }
+      .stat-value { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <p class="header-eyebrow">GoWild Pass — Unofficial Companion</p>
+    <h1>Every Destination,<br>One Pass</h1>
+    <p class="header-sub">All Frontier Airlines GoWild destinations in one view. Search, filter by vibe, and book in seconds.</p>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-label">Destinations</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="stat-domestic">—</div>
+      <div class="stat-label">Domestic</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="stat-intl">—</div>
+      <div class="stat-label">International</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="stat-hubs">—</div>
+      <div class="stat-label">Hub Cities</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <input type="text" class="search-input" id="search-input" placeholder="Search city or airport code…">
+
+    <div class="filter-tabs" id="filter-tabs">
+      <button class="filter-tab active" data-vibe="ALL">All</button>
+      <button class="filter-tab" data-vibe="BEACH">Beach</button>
+      <button class="filter-tab" data-vibe="MOUNTAIN">Mountain</button>
+      <button class="filter-tab" data-vibe="CITY">City</button>
+      <button class="filter-tab" data-vibe="DESERT">Desert</button>
+      <button class="filter-tab" data-vibe="HEARTLAND">Heartland</button>
+    </div>
+
+    <div class="controls-right">
+      <select class="sort-select" id="sort-select">
+        <option value="alpha">A – Z</option>
+        <option value="iata">IATA Code</option>
+        <option value="region">By Region</option>
+      </select>
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="grid">Grid</button>
+        <button class="view-btn" data-view="list">List</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="result-count" id="result-count"></div>
+
+    <!-- Grid view -->
+    <div id="grid-panel" class="view-panel">
+      <div id="grid-content" class="grid-view"></div>
+    </div>
+
+    <!-- List view -->
+    <div id="list-panel" class="view-panel" style="display:none">
+      <div class="list-controls">
+        <span class="origin-label">Flying from</span>
+        <select class="origin-select" id="origin-select"></select>
+      </div>
+      <div id="list-content" class="list-view"></div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    Not affiliated with Frontier Airlines. GoWild pass fares shown are estimates based on distance — always verify pricing at flyfrontier.com. Destination availability subject to change.
+  </div>
+
+  <script>
+    const DESTINATIONS = [
+      // ── SOUTHEAST ──
+      { iata:"ATL", city:"Atlanta",         state:"GA",         region:"Southeast",     type:"domestic",      base:true,  vibe:"CITY",      lat:33.6407,  lon:-84.4277  },
+      { iata:"BNA", city:"Nashville",       state:"TN",         region:"Southeast",     type:"domestic",      base:false, vibe:"CITY",      lat:36.1245,  lon:-86.6782  },
+      { iata:"CHS", city:"Charleston",      state:"SC",         region:"Southeast",     type:"domestic",      base:false, vibe:"BEACH",     lat:32.8987,  lon:-80.0405  },
+      { iata:"CLT", city:"Charlotte",       state:"NC",         region:"Southeast",     type:"domestic",      base:false, vibe:"CITY",      lat:35.2144,  lon:-80.9473  },
+      { iata:"FLL", city:"Fort Lauderdale", state:"FL",         region:"Southeast",     type:"domestic",      base:false, vibe:"BEACH",     lat:26.0726,  lon:-80.1527  },
+      { iata:"JAX", city:"Jacksonville",    state:"FL",         region:"Southeast",     type:"domestic",      base:false, vibe:"BEACH",     lat:30.4941,  lon:-81.6879  },
+      { iata:"MCO", city:"Orlando",         state:"FL",         region:"Southeast",     type:"domestic",      base:true,  vibe:"CITY",      lat:28.4294,  lon:-81.3089  },
+      { iata:"MEM", city:"Memphis",         state:"TN",         region:"Southeast",     type:"domestic",      base:false, vibe:"HEARTLAND", lat:35.0424,  lon:-89.9767  },
+      { iata:"MIA", city:"Miami",           state:"FL",         region:"Southeast",     type:"domestic",      base:true,  vibe:"BEACH",     lat:25.7959,  lon:-80.2870  },
+      { iata:"MSY", city:"New Orleans",     state:"LA",         region:"Southeast",     type:"domestic",      base:false, vibe:"CITY",      lat:29.9902,  lon:-90.2580  },
+      { iata:"PBI", city:"West Palm Beach", state:"FL",         region:"Southeast",     type:"domestic",      base:false, vibe:"BEACH",     lat:26.6832,  lon:-80.0956  },
+      { iata:"RDU", city:"Raleigh",         state:"NC",         region:"Southeast",     type:"domestic",      base:false, vibe:"CITY",      lat:35.8801,  lon:-78.7880  },
+      { iata:"RSW", city:"Fort Myers",      state:"FL",         region:"Southeast",     type:"domestic",      base:false, vibe:"BEACH",     lat:26.5362,  lon:-81.7552  },
+      { iata:"SRQ", city:"Sarasota",        state:"FL",         region:"Southeast",     type:"domestic",      base:false, vibe:"BEACH",     lat:27.3954,  lon:-82.5544  },
+      { iata:"TPA", city:"Tampa",           state:"FL",         region:"Southeast",     type:"domestic",      base:true,  vibe:"BEACH",     lat:27.9755,  lon:-82.5332  },
+      // ── MID-ATLANTIC ──
+      { iata:"BWI", city:"Baltimore",       state:"MD",         region:"Mid-Atlantic",  type:"domestic",      base:false, vibe:"CITY",      lat:39.1754,  lon:-76.6682  },
+      { iata:"DCA", city:"Washington DC",   state:"VA",         region:"Mid-Atlantic",  type:"domestic",      base:false, vibe:"CITY",      lat:38.8512,  lon:-77.0402  },
+      { iata:"IAD", city:"Dulles",          state:"VA",         region:"Mid-Atlantic",  type:"domestic",      base:false, vibe:"CITY",      lat:38.9531,  lon:-77.4565  },
+      { iata:"ORF", city:"Norfolk",         state:"VA",         region:"Mid-Atlantic",  type:"domestic",      base:false, vibe:"BEACH",     lat:36.8976,  lon:-76.0178  },
+      { iata:"PHL", city:"Philadelphia",    state:"PA",         region:"Mid-Atlantic",  type:"domestic",      base:true,  vibe:"CITY",      lat:39.8729,  lon:-75.2437  },
+      { iata:"PIT", city:"Pittsburgh",      state:"PA",         region:"Mid-Atlantic",  type:"domestic",      base:false, vibe:"CITY",      lat:40.4917,  lon:-80.2329  },
+      { iata:"RIC", city:"Richmond",        state:"VA",         region:"Mid-Atlantic",  type:"domestic",      base:false, vibe:"CITY",      lat:37.5052,  lon:-77.3197  },
+      // ── NORTHEAST ──
+      { iata:"BDL", city:"Hartford",        state:"CT",         region:"Northeast",     type:"domestic",      base:false, vibe:"CITY",      lat:41.9389,  lon:-72.6832  },
+      { iata:"BOS", city:"Boston",          state:"MA",         region:"Northeast",     type:"domestic",      base:false, vibe:"CITY",      lat:42.3656,  lon:-71.0096  },
+      { iata:"BUF", city:"Buffalo",         state:"NY",         region:"Northeast",     type:"domestic",      base:false, vibe:"CITY",      lat:42.9405,  lon:-78.7322  },
+      { iata:"EWR", city:"Newark",          state:"NJ",         region:"Northeast",     type:"domestic",      base:false, vibe:"CITY",      lat:40.6895,  lon:-74.1745  },
+      { iata:"JFK", city:"New York",        state:"NY",         region:"Northeast",     type:"domestic",      base:false, vibe:"CITY",      lat:40.6413,  lon:-73.7781  },
+      { iata:"LGA", city:"LaGuardia",       state:"NY",         region:"Northeast",     type:"domestic",      base:false, vibe:"CITY",      lat:40.7769,  lon:-73.8740  },
+      { iata:"SYR", city:"Syracuse",        state:"NY",         region:"Northeast",     type:"domestic",      base:false, vibe:"CITY",      lat:43.1112,  lon:-76.1063  },
+      // ── MIDWEST ──
+      { iata:"CLE", city:"Cleveland",       state:"OH",         region:"Midwest",       type:"domestic",      base:false, vibe:"CITY",      lat:41.4117,  lon:-81.8498  },
+      { iata:"CMH", city:"Columbus",        state:"OH",         region:"Midwest",       type:"domestic",      base:false, vibe:"CITY",      lat:39.9980,  lon:-82.8919  },
+      { iata:"CVG", city:"Cincinnati",      state:"OH",         region:"Midwest",       type:"domestic",      base:false, vibe:"CITY",      lat:39.0488,  lon:-84.6678  },
+      { iata:"DTW", city:"Detroit",         state:"MI",         region:"Midwest",       type:"domestic",      base:false, vibe:"CITY",      lat:42.2162,  lon:-83.3554  },
+      { iata:"GRR", city:"Grand Rapids",    state:"MI",         region:"Midwest",       type:"domestic",      base:false, vibe:"HEARTLAND", lat:42.8808,  lon:-85.5228  },
+      { iata:"IND", city:"Indianapolis",    state:"IN",         region:"Midwest",       type:"domestic",      base:false, vibe:"HEARTLAND", lat:39.7173,  lon:-86.2944  },
+      { iata:"MCI", city:"Kansas City",     state:"MO",         region:"Midwest",       type:"domestic",      base:false, vibe:"HEARTLAND", lat:39.2976,  lon:-94.7139  },
+      { iata:"MDW", city:"Chicago Midway",  state:"IL",         region:"Midwest",       type:"domestic",      base:false, vibe:"CITY",      lat:41.7868,  lon:-87.7522  },
+      { iata:"MKE", city:"Milwaukee",       state:"WI",         region:"Midwest",       type:"domestic",      base:false, vibe:"HEARTLAND", lat:42.9472,  lon:-87.8966  },
+      { iata:"MSP", city:"Minneapolis",     state:"MN",         region:"Midwest",       type:"domestic",      base:false, vibe:"HEARTLAND", lat:44.8848,  lon:-93.2223  },
+      { iata:"OKC", city:"Oklahoma City",   state:"OK",         region:"Midwest",       type:"domestic",      base:false, vibe:"HEARTLAND", lat:35.3931,  lon:-97.6007  },
+      { iata:"OMA", city:"Omaha",           state:"NE",         region:"Midwest",       type:"domestic",      base:false, vibe:"HEARTLAND", lat:41.3032,  lon:-95.8941  },
+      { iata:"ORD", city:"Chicago",         state:"IL",         region:"Midwest",       type:"domestic",      base:false, vibe:"CITY",      lat:41.9742,  lon:-87.9073  },
+      { iata:"STL", city:"St. Louis",       state:"MO",         region:"Midwest",       type:"domestic",      base:false, vibe:"HEARTLAND", lat:38.7487,  lon:-90.3700  },
+      { iata:"XNA", city:"Fayetteville",    state:"AR",         region:"Midwest",       type:"domestic",      base:false, vibe:"HEARTLAND", lat:36.2819,  lon:-94.3069  },
+      // ── TEXAS ──
+      { iata:"AUS", city:"Austin",          state:"TX",         region:"Texas",         type:"domestic",      base:false, vibe:"CITY",      lat:30.1975,  lon:-97.6664  },
+      { iata:"DFW", city:"Dallas/Ft Worth", state:"TX",         region:"Texas",         type:"domestic",      base:true,  vibe:"CITY",      lat:32.8998,  lon:-97.0403  },
+      { iata:"ELP", city:"El Paso",         state:"TX",         region:"Texas",         type:"domestic",      base:false, vibe:"DESERT",    lat:31.8072,  lon:-106.3779 },
+      { iata:"HOU", city:"Houston Hobby",   state:"TX",         region:"Texas",         type:"domestic",      base:false, vibe:"CITY",      lat:29.6454,  lon:-95.2789  },
+      { iata:"SAT", city:"San Antonio",     state:"TX",         region:"Texas",         type:"domestic",      base:false, vibe:"CITY",      lat:29.5337,  lon:-98.4698  },
+      // ── MOUNTAIN WEST ──
+      { iata:"BOI", city:"Boise",           state:"ID",         region:"Mountain West", type:"domestic",      base:false, vibe:"MOUNTAIN",  lat:43.5644,  lon:-116.2228 },
+      { iata:"DEN", city:"Denver",          state:"CO",         region:"Mountain West", type:"domestic",      base:true,  vibe:"MOUNTAIN",  lat:39.8561,  lon:-104.6737 },
+      { iata:"RNO", city:"Reno",            state:"NV",         region:"Mountain West", type:"domestic",      base:false, vibe:"MOUNTAIN",  lat:39.4991,  lon:-119.7681 },
+      { iata:"SLC", city:"Salt Lake City",  state:"UT",         region:"Mountain West", type:"domestic",      base:false, vibe:"MOUNTAIN",  lat:40.7899,  lon:-111.9791 },
+      // ── SOUTHWEST ──
+      { iata:"LAS", city:"Las Vegas",       state:"NV",         region:"Southwest",     type:"domestic",      base:true,  vibe:"CITY",      lat:36.0840,  lon:-115.1537 },
+      { iata:"PHX", city:"Phoenix",         state:"AZ",         region:"Southwest",     type:"domestic",      base:true,  vibe:"DESERT",    lat:33.4373,  lon:-112.0078 },
+      { iata:"TUS", city:"Tucson",          state:"AZ",         region:"Southwest",     type:"domestic",      base:false, vibe:"DESERT",    lat:32.1161,  lon:-110.9410 },
+      // ── PACIFIC ──
+      { iata:"BUR", city:"Burbank",         state:"CA",         region:"Pacific",       type:"domestic",      base:false, vibe:"CITY",      lat:34.2006,  lon:-118.3584 },
+      { iata:"LAX", city:"Los Angeles",     state:"CA",         region:"Pacific",       type:"domestic",      base:true,  vibe:"CITY",      lat:33.9425,  lon:-118.4081 },
+      { iata:"ONT", city:"Ontario",         state:"CA",         region:"Pacific",       type:"domestic",      base:false, vibe:"CITY",      lat:34.0560,  lon:-117.6012 },
+      { iata:"SAN", city:"San Diego",       state:"CA",         region:"Pacific",       type:"domestic",      base:false, vibe:"BEACH",     lat:32.7338,  lon:-117.1933 },
+      { iata:"SFO", city:"San Francisco",   state:"CA",         region:"Pacific",       type:"domestic",      base:false, vibe:"CITY",      lat:37.6213,  lon:-122.3790 },
+      { iata:"SJC", city:"San Jose",        state:"CA",         region:"Pacific",       type:"domestic",      base:false, vibe:"CITY",      lat:37.3626,  lon:-121.9290 },
+      { iata:"SMF", city:"Sacramento",      state:"CA",         region:"Pacific",       type:"domestic",      base:false, vibe:"CITY",      lat:38.6954,  lon:-121.5908 },
+      { iata:"SNA", city:"Orange County",   state:"CA",         region:"Pacific",       type:"domestic",      base:false, vibe:"BEACH",     lat:33.6757,  lon:-117.8682 },
+      // ── PACIFIC NORTHWEST ──
+      { iata:"GEG", city:"Spokane",         state:"WA",         region:"Pacific NW",    type:"domestic",      base:false, vibe:"MOUNTAIN",  lat:47.6199,  lon:-117.5338 },
+      { iata:"PDX", city:"Portland",        state:"OR",         region:"Pacific NW",    type:"domestic",      base:false, vibe:"MOUNTAIN",  lat:45.5898,  lon:-122.5951 },
+      { iata:"SEA", city:"Seattle",         state:"WA",         region:"Pacific NW",    type:"domestic",      base:false, vibe:"MOUNTAIN",  lat:47.4502,  lon:-122.3088 },
+      // ── US TERRITORIES ──
+      { iata:"SJU", city:"San Juan",        state:"PR",         region:"Caribbean US",  type:"domestic",      base:false, vibe:"BEACH",     lat:18.4394,  lon:-66.0018  },
+      // ── MEXICO ──
+      { iata:"CUN", city:"Cancún",          state:"Mexico",     region:"Mexico",        type:"international", base:false, vibe:"BEACH",     lat:21.0365,  lon:-86.8771  },
+      { iata:"GDL", city:"Guadalajara",     state:"Mexico",     region:"Mexico",        type:"international", base:false, vibe:"CITY",      lat:20.5218,  lon:-103.3111 },
+      { iata:"MZT", city:"Mazatlán",        state:"Mexico",     region:"Mexico",        type:"international", base:false, vibe:"BEACH",     lat:23.1614,  lon:-106.2661 },
+      { iata:"PVR", city:"Puerto Vallarta", state:"Mexico",     region:"Mexico",        type:"international", base:false, vibe:"BEACH",     lat:20.6801,  lon:-105.2544 },
+      { iata:"SJD", city:"Los Cabos",       state:"Mexico",     region:"Mexico",        type:"international", base:false, vibe:"BEACH",     lat:23.1518,  lon:-109.7215 },
+      // ── CARIBBEAN ──
+      { iata:"PUJ", city:"Punta Cana",      state:"Dom. Rep.",  region:"Caribbean",     type:"international", base:false, vibe:"BEACH",     lat:18.5674,  lon:-68.3634  },
+      { iata:"SDQ", city:"Santo Domingo",   state:"Dom. Rep.",  region:"Caribbean",     type:"international", base:false, vibe:"BEACH",     lat:18.4297,  lon:-69.6689  },
+      // ── CENTRAL AMERICA ──
+      { iata:"GUA", city:"Guatemala City",  state:"Guatemala",  region:"Central America", type:"international", base:false, vibe:"CITY",   lat:14.5833,  lon:-90.5275  },
+      { iata:"SAL", city:"San Salvador",    state:"El Salvador", region:"Central America", type:"international", base:false, vibe:"CITY",  lat:13.4409,  lon:-89.0557  },
+    ];
+
+    const HUBS = [
+      { iata:"DFW", city:"Dallas/Ft Worth, TX", lat:32.8998, lon:-97.0403 },
+      { iata:"DEN", city:"Denver, CO",           lat:39.8561, lon:-104.6737 },
+      { iata:"LAS", city:"Las Vegas, NV",        lat:36.0840, lon:-115.1537 },
+      { iata:"PHX", city:"Phoenix, AZ",          lat:33.4373, lon:-112.0078 },
+      { iata:"ATL", city:"Atlanta, GA",          lat:33.6407, lon:-84.4277 },
+      { iata:"MCO", city:"Orlando, FL",          lat:28.4294, lon:-81.3089 },
+      { iata:"MIA", city:"Miami, FL",            lat:25.7959, lon:-80.2870 },
+      { iata:"LAX", city:"Los Angeles, CA",      lat:33.9425, lon:-118.4081 },
+      { iata:"PHL", city:"Philadelphia, PA",     lat:39.8729, lon:-75.2437 },
+      { iata:"TPA", city:"Tampa, FL",            lat:27.9755, lon:-82.5332 },
+    ];
+
+    const VIBE_COLORS = {
+      BEACH:"#00d4b4", MOUNTAIN:"#4a90d9", CITY:"#ff6b35", DESERT:"#f5b041", HEARTLAND:"#a8c97f"
+    };
+
+    // ── Utilities ──
+    function haversine(lat1, lon1, lat2, lon2) {
+      const R = 3959;
+      const r = d => d * Math.PI / 180;
+      const dLat = r(lat2 - lat1), dLon = r(lon2 - lon1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(r(lat1)) * Math.cos(r(lat2)) * Math.sin(dLon/2)**2;
+      return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    function getDuration(o, d) {
+      const mi = haversine(o.lat, o.lon, d.lat, d.lon);
+      const hrs = mi / 500;
+      const h = Math.floor(hrs), m = Math.round((hrs - h) * 60);
+      return m === 0 ? `${h}h` : `${h}h ${m}m`;
+    }
+
+    function getPrice(o, d) {
+      const mi = haversine(o.lat, o.lon, d.lat, d.lon);
+      let seed = 0;
+      for (const c of d.iata) seed = (seed * 31 + c.charCodeAt(0)) & 0xffff;
+      const v = 0.8 + (seed / 65535) * 0.4;
+      const base = d.type === "international" ? 69 : 39;
+      return Math.min(Math.max(Math.round((base + mi * 0.062) * v), 29), 599);
+    }
+
+    // ── State ──
+    let view = "grid";
+    let vibe = "ALL";
+    let sort = "alpha";
+    let search = "";
+    let origin = null; // set in init
+
+    function getFiltered() {
+      let ds = DESTINATIONS.slice();
+      if (vibe !== "ALL") ds = ds.filter(d => d.vibe === vibe);
+      if (search) {
+        const q = search.toLowerCase();
+        ds = ds.filter(d =>
+          d.city.toLowerCase().includes(q) ||
+          d.iata.toLowerCase().includes(q) ||
+          d.state.toLowerCase().includes(q) ||
+          d.region.toLowerCase().includes(q)
+        );
+      }
+      return ds;
+    }
+
+    function sorted(ds) {
+      const c = [...ds];
+      if (sort === "alpha")  return c.sort((a,b) => a.city.localeCompare(b.city));
+      if (sort === "iata")   return c.sort((a,b) => a.iata.localeCompare(b.iata));
+      if (sort === "region") return c.sort((a,b) => a.region.localeCompare(b.region) || a.city.localeCompare(b.city));
+      return c;
+    }
+
+    // ── Render helpers ──
+    function cardHTML(d) {
+      return `<div class="dest-card" data-vibe="${d.vibe}">
+        <div class="card-iata">${d.iata}</div>
+        ${d.type === "international" ? `<div class="card-intl-badge">INTL</div>` : ""}
+        <div class="card-city">${d.city}</div>
+        <div class="card-state">${d.state}</div>
+        <div class="card-vibe-tag" data-vibe="${d.vibe}"><span class="vibe-dot"></span>${d.vibe}</div>
+      </div>`;
+    }
+
+    function renderGrid() {
+      const ds = sorted(getFiltered());
+      const el = document.getElementById("grid-content");
+      if (!ds.length) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-title">No destinations found</div><p>Try adjusting your search or filter</p></div>`;
+        return;
+      }
+      if (sort === "region") {
+        const groups = {};
+        for (const d of ds) { (groups[d.region] = groups[d.region] || []).push(d); }
+        el.innerHTML = Object.keys(groups).sort().map(r =>
+          `<div class="region-group">
+            <div class="region-label">${r}</div>
+            <div class="card-grid">${groups[r].map(cardHTML).join("")}</div>
+          </div>`
+        ).join("");
+      } else {
+        el.innerHTML = `<div class="card-grid">${ds.map(cardHTML).join("")}</div>`;
+      }
+    }
+
+    function renderList() {
+      const ds = sorted(getFiltered()).filter(d => d.iata !== origin.iata);
+      const el = document.getElementById("list-content");
+      if (!ds.length) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-title">No destinations found</div><p>Try adjusting your search or filter</p></div>`;
+        return;
+      }
+      const date = new Date(Date.now() + 7*86400000).toISOString().split("T")[0];
+      el.innerHTML = ds.map(d => {
+        const dur = getDuration(origin, d);
+        const vc = VIBE_COLORS[d.vibe];
+        const url = `https://www.flyfrontier.com/flights/search?origin=${origin.iata}&destination=${d.iata}&departDate=${date}&adults=1`;
+        return `<div class="flight-row">
+          <div class="flight-airport">
+            <div class="airport-code">${origin.iata}</div>
+            <div class="airport-city">${origin.city}, ${origin.state}</div>
+          </div>
+          <div class="flight-line">
+            <div class="flight-duration">${dur}</div>
+            <div class="flight-track">
+              <div class="track-line"></div>
+              <div class="track-arrow"></div>
+            </div>
+          </div>
+          <div class="flight-airport flight-dest">
+            <div class="airport-code">${d.iata}</div>
+            <div class="airport-city">${d.city}, ${d.state}</div>
+            <div class="flight-vibe-tag" style="color:${vc}">${d.vibe}</div>
+          </div>
+          <div class="flight-price">
+            <div class="price-value">$0.01</div>
+            <div class="price-label">+ ~$30 taxes</div>
+          </div>
+          <a class="book-btn" href="${url}" target="_blank" rel="noopener noreferrer">Book →</a>
+        </div>`;
+      }).join("");
+    }
+
+    function updateCount() {
+      const n = getFiltered().length;
+      document.getElementById("result-count").textContent = `${n} destination${n===1?"":"s"}`;
+    }
+
+    function render() {
+      updateCount();
+      if (view === "grid") renderGrid(); else renderList();
+    }
+
+    function switchView(newView) {
+      if (newView === view) return;
+      const outEl = document.getElementById(view + "-panel");
+      outEl.style.opacity = "0";
+      setTimeout(() => {
+        outEl.style.display = "none";
+        view = newView;
+        const inEl = document.getElementById(view + "-panel");
+        inEl.style.opacity = "0";
+        inEl.style.display = "";
+        render();
+        requestAnimationFrame(() => {
+          inEl.style.transition = "opacity 0.2s ease";
+          inEl.style.opacity = "1";
+        });
+        document.querySelectorAll(".view-btn").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+      }, 200);
+    }
+
+    // ── Init ──
+    function init() {
+      document.getElementById("stat-total").textContent    = DESTINATIONS.length;
+      document.getElementById("stat-domestic").textContent = DESTINATIONS.filter(d=>d.type==="domestic").length;
+      document.getElementById("stat-intl").textContent     = DESTINATIONS.filter(d=>d.type==="international").length;
+      document.getElementById("stat-hubs").textContent     = DESTINATIONS.filter(d=>d.base).length;
+
+      const sel = document.getElementById("origin-select");
+      const sortedAll = DESTINATIONS.slice().sort((a,b) => a.city.localeCompare(b.city));
+      sortedAll.forEach(d => {
+        const o = document.createElement("option");
+        o.value = d.iata;
+        o.textContent = `${d.iata} — ${d.city}, ${d.state}`;
+        if (d.iata === "DFW") o.selected = true;
+        sel.appendChild(o);
+      });
+      origin = DESTINATIONS.find(d => d.iata === "DFW") || DESTINATIONS[0];
+
+      document.getElementById("search-input").addEventListener("input", e => {
+        search = e.target.value.trim();
+        render();
+      });
+
+      document.getElementById("filter-tabs").addEventListener("click", e => {
+        const tab = e.target.closest(".filter-tab");
+        if (!tab) return;
+        document.querySelectorAll(".filter-tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        vibe = tab.dataset.vibe;
+        render();
+      });
+
+      document.getElementById("sort-select").addEventListener("change", e => {
+        sort = e.target.value;
+        render();
+      });
+
+      document.querySelectorAll(".view-btn").forEach(b => {
+        b.addEventListener("click", () => switchView(b.dataset.view));
+      });
+
+      sel.addEventListener("change", e => {
+        origin = DESTINATIONS.find(d => d.iata === e.target.value);
+        if (view === "list") renderList();
+      });
+
+      render();
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>

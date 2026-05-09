@@ -48,27 +48,36 @@ function ResultsContent() {
       return (a.duration || "").localeCompare(b.duration || "");
     });
 
+  const selectStyle = {
+    borderColor: "var(--border)",
+    backgroundColor: "var(--bg-2)",
+    color: "var(--fg)",
+    borderRadius: "0.5rem",
+    padding: "6px 10px",
+    fontSize: 13,
+    outline: "none",
+    border: "1px solid var(--border)",
+  };
+
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-5xl mx-auto px-5 py-8">
       <div className="mb-6">
-        <SearchForm
-          compact
-          initialValues={{ origin, originName, destination, destinationName, date, passengers }}
-        />
+        <SearchForm compact initialValues={{ origin, originName, destination, destinationName, date, passengers }} />
       </div>
 
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-500">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-          <span>Searching GoWild! availability...</span>
+        <div className="flex flex-col items-center justify-center py-20 gap-3" style={{ color: "var(--fg-3)" }}>
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <span className="text-sm">Searching GoWild availability...</span>
         </div>
       )}
 
       {error && (
-        <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
+        <div className="flex items-center gap-3 rounded-xl p-4 mb-6 border"
+          style={{ borderColor: "var(--border)", backgroundColor: "var(--bg)", color: "var(--fg-2)" }}>
           <AlertCircle className="w-5 h-5 shrink-0" />
           <div>
-            <div className="font-semibold">Search error</div>
+            <div className="text-sm font-semibold" style={{ color: "var(--fg)" }}>Search error</div>
             <div className="text-sm">{error}</div>
           </div>
         </div>
@@ -77,26 +86,17 @@ function ResultsContent() {
       {!loading && !error && flights.length > 0 && (
         <>
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-            <div className="text-sm text-gray-600">
-              <span className="font-semibold text-gray-900">{filtered.length}</span> flights found ·{" "}
-              <span className="text-indigo-600">{originName}</span> → <span className="text-indigo-600">{destinationName}</span>
+            <div className="text-sm" style={{ color: "var(--fg-2)" }}>
+              <span className="font-semibold" style={{ color: "var(--fg)" }}>{filtered.length}</span> flights · {originName} → {destinationName}
             </div>
             <div className="flex items-center gap-3 text-sm">
-              <SlidersHorizontal className="w-4 h-4 text-gray-400" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
+              <SlidersHorizontal className="w-4 h-4" style={{ color: "var(--fg-3)" }} />
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} style={selectStyle}>
                 <option value="price">Sort: Price</option>
                 <option value="departure">Sort: Departure</option>
                 <option value="duration">Sort: Duration</option>
               </select>
-              <select
-                value={maxStops}
-                onChange={(e) => setMaxStops(Number(e.target.value))}
-                className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
+              <select value={maxStops} onChange={(e) => setMaxStops(Number(e.target.value))} style={selectStyle}>
                 <option value={0}>Nonstop only</option>
                 <option value={1}>Max 1 stop</option>
                 <option value={3}>Any stops</option>
@@ -104,17 +104,15 @@ function ResultsContent() {
             </div>
           </div>
           <div className="space-y-3">
-            {filtered.map((flight) => (
-              <FlightCard key={flight.id} flight={flight} />
-            ))}
+            {filtered.map((flight) => <FlightCard key={flight.id} flight={flight} />)}
           </div>
         </>
       )}
 
       {!loading && !error && flights.length === 0 && origin && destination && (
-        <div className="text-center py-20 text-gray-500">
-          <div className="text-4xl mb-4">✈️</div>
-          <div className="font-semibold text-gray-900 mb-2">No flights found</div>
+        <div className="text-center py-20" style={{ color: "var(--fg-3)" }}>
+          <div className="text-4xl mb-4">✈</div>
+          <div className="font-medium mb-2" style={{ color: "var(--fg)" }}>No flights found</div>
           <div className="text-sm">Try a different date or route.</div>
         </div>
       )}
@@ -124,7 +122,11 @@ function ResultsContent() {
 
 export default function ResultsPage() {
   return (
-    <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
+    <Suspense fallback={
+      <div className="flex justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--fg-3)" }} />
+      </div>
+    }>
       <ResultsContent />
     </Suspense>
   );
