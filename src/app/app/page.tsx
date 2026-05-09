@@ -155,12 +155,17 @@ function GridCard({ flight }: { flight: SearchResult }) {
         {flight.destinationCity}
       </div>
 
-      {/* Vibe + duration */}
+      {/* Vibe + duration + time */}
       <div className="flex items-center justify-between mt-3">
         <div style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.15em", color, backgroundColor: `${color}18`, padding: "3px 9px", borderRadius: 20 }}>
           {vibeLabel(flight.destination).toUpperCase()}
         </div>
-        <div className="text-xs" style={{ color: "var(--fg-3)" }}>{formatDuration(flight.duration)}</div>
+        <div className="text-right">
+          <div className="text-xs" style={{ color: "var(--fg-3)" }}>{formatDuration(flight.duration)}</div>
+          <div className="text-xs mt-0.5" style={{ color: "var(--fg-2)", fontFamily: "var(--font-mono)" }}>
+            {formatTime(flight.departureTime)} → {formatTime(flight.arrivalTime)}
+          </div>
+        </div>
       </div>
 
       {/* Price + book */}
@@ -256,11 +261,14 @@ function ExploreContent() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div>
-              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 11, letterSpacing: "0.25em", color: "var(--fg-3)", marginBottom: 4 }}>
-                FLYING FROM {origin}
+              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 11, letterSpacing: "0.3em", color: "var(--beach)", marginBottom: 6 }}>
+                ONE-WAY · GOWILD PASS
               </div>
-              <div style={{ fontFamily: "var(--font-serif)", fontSize: 26, fontWeight: 700, color: "var(--fg)" }}>
-                {flights.length} destinations found
+              <div style={{ fontFamily: "var(--font-serif)", fontSize: 36, fontWeight: 900, color: "var(--fg)", lineHeight: 1.05 }}>
+                Flying from <span style={{ color: "var(--beach)" }}>{origin}</span>
+              </div>
+              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 13, letterSpacing: "0.15em", color: "var(--fg-3)", marginTop: 4 }}>
+                {flights.length} DESTINATIONS FOUND
               </div>
             </div>
             <ViewToggle view={view} setView={setView} />

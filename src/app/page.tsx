@@ -1,13 +1,6 @@
 import OriginSearch from "@/components/OriginSearch";
 import Link from "next/link";
 
-const STATS = [
-  { value: "80+", label: "Destinations" },
-  { value: "$0.01", label: "Base Fare" },
-  { value: "28", label: "Days of Fares" },
-  { value: "Free", label: "To Use" },
-];
-
 const FEATURES = [
   {
     href: "/app",
@@ -58,20 +51,6 @@ export default function Home() {
           <OriginSearch />
         </div>
       </section>
-
-      {/* Stats bar */}
-      <div className="flex justify-center" style={{ borderBottom: "1px solid var(--border)", backgroundColor: "var(--bg-2)" }}>
-        {STATS.map((s, i) => (
-          <div
-            key={s.label}
-            className="flex-1 py-5 text-center"
-            style={{ maxWidth: 180, borderRight: i < STATS.length - 1 ? "1px solid var(--border)" : "none" }}
-          >
-            <div style={{ fontFamily: "var(--font-bebas)", fontSize: 30, letterSpacing: "0.05em", color: "var(--fg)" }}>{s.value}</div>
-            <div style={{ fontFamily: "var(--font-bebas)", fontSize: 9, letterSpacing: "0.2em", color: "var(--fg-3)", marginTop: 2 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
 
       {/* Feature cards */}
       <div className="max-w-4xl mx-auto px-5 py-14 grid grid-cols-1 sm:grid-cols-2 gap-3">
