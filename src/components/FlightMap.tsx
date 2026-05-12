@@ -106,38 +106,64 @@ function RouteLayer({
   const planeElRef = useRef<HTMLElement | null>(null);
   const planeId = useRef(`wm-plane-${++planeCounter}`);
   const tRef = useRef(0);
+  const lastTimeRef = useRef<number | null>(null);
+  const pixelLengthRef = useRef(0);
   const isAnimating = useRef(false);
+  const isPausing = useRef(false);
+  const stopDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const restartTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const onZoomRef = useRef<(() => void) | null>(null);
 
   const path = destCoord ? greatCirclePoints(originCoord, destCoord, 100) : ([] as [number, number][]);
 
-  // Colours that adapt to map theme
   const teal = mapTheme === "day" ? "#0d9488" : "#00d4b4";
   const dimRoute = mapTheme === "day" ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.09)";
   const hovRoute = mapTheme === "day" ? "rgba(13,148,136,0.20)" : "rgba(0,212,180,0.15)";
 
-  const stopAnim = () => {
+  const computePixelLength = () => {
+    if (path.length < 2) return 1;
+    let len = 0;
+    for (let i = 0; i < path.length - 1; i++) {
+      const a = map.latLngToContainerPoint(path[i]);
+      const b = map.latLngToContainerPoint(path[i + 1]);
+      len += Math.hypot(b.x - a.x, b.y - a.y);
+    }
+    return Math.max(len, 1);
+  };
+
+  const doStop = () => {
+    if (restartTimerRef.current) { clearTimeout(restartTimerRef.current); restartTimerRef.current = null; }
     isAnimating.current = false;
+    isPausing.current = false;
     if (animRef.current !== null) { cancelAnimationFrame(animRef.current); animRef.current = null; }
+    if (onZoomRef.current) { map.off("zoom", onZoomRef.current); onZoomRef.current = null; }
     if (markerRef.current) { map.removeLayer(markerRef.current); markerRef.current = null; }
     if (glowHaloRef.current) { map.removeLayer(glowHaloRef.current); glowHaloRef.current = null; }
     if (glowCoreRef.current) { map.removeLayer(glowCoreRef.current); glowCoreRef.current = null; }
     planeElRef.current = null;
     tRef.current = 0;
+    lastTimeRef.current = null;
+  };
+
+  const stopAnim = () => {
+    if (stopDebounceRef.current) clearTimeout(stopDebounceRef.current);
+    stopDebounceRef.current = setTimeout(doStop, 80);
   };
 
   const startAnim = () => {
-    if (isAnimating.current || !destCoord || path.length === 0) return;
+    if (stopDebounceRef.current) { clearTimeout(stopDebounceRef.current); stopDebounceRef.current = null; }
+    if (isAnimating.current || isPausing.current || !destCoord || path.length === 0) return;
     isAnimating.current = true;
+    lastTimeRef.current = null;
+    pixelLengthRef.current = computePixelLength();
 
-    // Layered glow trail
-    glowHaloRef.current = L.polyline([], {
-      color: teal, weight: 14, opacity: 0.07,
-    }).addTo(map);
-    glowCoreRef.current = L.polyline([], {
-      color: teal, weight: 2.5, opacity: 0.85,
-    }).addTo(map);
+    const onZoom = () => { pixelLengthRef.current = computePixelLength(); };
+    onZoomRef.current = onZoom;
+    map.on("zoom", onZoom);
 
-    // Plane marker — created ONCE, mutated each frame via direct DOM ref
+    glowHaloRef.current = L.polyline([], { color: teal, weight: 14, opacity: 0.07 }).addTo(map);
+    glowCoreRef.current = L.polyline([], { color: teal, weight: 2.5, opacity: 0.85 }).addTo(map);
+
     const id = planeId.current;
     markerRef.current = L.marker(originCoord, {
       icon: L.divIcon({
@@ -150,45 +176,37 @@ function RouteLayer({
       zIndexOffset: 1000,
     }).addTo(map);
 
-    const animate = () => {
+    const PIXELS_PER_SEC = 120;
+
+    const animate = (timestamp: number) => {
       if (!isAnimating.current) return;
 
-      tRef.current += 0.0010; // ~16 s per loop at 60 fps
-      if (tRef.current >= 1) {
-        tRef.current = 0;
-        glowHaloRef.current?.setLatLngs([]);
-        glowCoreRef.current?.setLatLngs([]);
-      }
+      const dt = lastTimeRef.current !== null ? (timestamp - lastTimeRef.current) / 1000 : 0;
+      lastTimeRef.current = timestamp;
 
+      tRef.current = Math.min(tRef.current + (PIXELS_PER_SEC * dt) / pixelLengthRef.current, 1);
       const t = tRef.current;
       const rawIdx = t * (path.length - 1);
       const idx = Math.min(Math.floor(rawIdx), path.length - 2);
       const frac = rawIdx - idx;
 
-      // Sub-point interpolation for silky smooth movement
       const p0 = path[idx];
       const p1 = path[idx + 1];
       const lat = p0[0] + (p1[0] - p0[0]) * frac;
       const lng = p0[1] + (p1[1] - p0[1]) * frac;
 
-      // Mercator-corrected bearing (angle from north, clockwise)
-      const dLat = p1[0] - p0[0];
-      const dLng = p1[1] - p0[1];
-      const cosLat = Math.cos(lat * Math.PI / 180);
-      const bearingNorth = Math.atan2(dLng * cosLat, dLat) * (180 / Math.PI);
-      // ✈ emoji faces upper-right (~45° from north), so subtract 45° to align
-      const cssRotation = bearingNorth - 45;
+      // Screen-space bearing: convert adjacent path points to pixels, compute angle
+      // cssRotation = screenAngle + 45 because ✈ emoji faces NE (45°) at 0 CSS rotation
+      const pA = map.latLngToContainerPoint(p0);
+      const pB = map.latLngToContainerPoint(p1);
+      const screenAngle = Math.atan2(pB.y - pA.y, pB.x - pA.x) * (180 / Math.PI);
+      const cssRotation = screenAngle + 45;
 
-      // Subtle 3D scale at arc peak
       const scale = 1 + 0.35 * Math.sin(t * Math.PI);
-      const iconPx = Math.round(17 + scale * 5); // 17–23 px
+      const iconPx = Math.round(17 + scale * 5);
       const glow = Math.round(7 + scale * 5);
 
-      // Lazy DOM lookup (once, on first frame)
-      if (!planeElRef.current) {
-        planeElRef.current = document.getElementById(id) as HTMLElement | null;
-      }
-      // Direct DOM mutation — ZERO icon-recreation overhead
+      if (!planeElRef.current) planeElRef.current = document.getElementById(id) as HTMLElement | null;
       if (planeElRef.current) {
         planeElRef.current.style.transform = `rotate(${cssRotation.toFixed(1)}deg) scale(${scale.toFixed(3)})`;
         planeElRef.current.style.fontSize = `${iconPx}px`;
@@ -196,18 +214,43 @@ function RouteLayer({
       }
       markerRef.current?.setLatLng([lat, lng]);
 
-      // Grow the traveled glow trail
       const trail = [...path.slice(0, idx + 1), [lat, lng] as [number, number]];
       glowHaloRef.current?.setLatLngs(trail);
       glowCoreRef.current?.setLatLngs(trail);
 
+      if (t >= 1) {
+        // Reached destination — pause 700ms then restart from origin
+        isAnimating.current = false;
+        isPausing.current = true;
+        if (onZoomRef.current) { map.off("zoom", onZoomRef.current); onZoomRef.current = null; }
+        restartTimerRef.current = setTimeout(() => {
+          restartTimerRef.current = null;
+          isPausing.current = false;
+          if (!markerRef.current) return; // user moved away during pause
+          tRef.current = 0;
+          lastTimeRef.current = null;
+          glowHaloRef.current?.setLatLngs([]);
+          glowCoreRef.current?.setLatLngs([]);
+          isAnimating.current = true;
+          pixelLengthRef.current = computePixelLength();
+          const newOnZoom = () => { pixelLengthRef.current = computePixelLength(); };
+          onZoomRef.current = newOnZoom;
+          map.on("zoom", newOnZoom);
+          animRef.current = requestAnimationFrame(animate);
+        }, 700);
+        return;
+      }
+
       animRef.current = requestAnimationFrame(animate);
     };
+
     animRef.current = requestAnimationFrame(animate);
   };
 
-  // Cleanup on unmount
-  useEffect(() => () => stopAnim(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => {
+    if (stopDebounceRef.current) clearTimeout(stopDebounceRef.current);
+    doStop();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!destCoord) return null;
 
@@ -231,27 +274,15 @@ function RouteLayer({
 
   return (
     <>
-      {/* ── Visual dashed background route — NOT interactive ── */}
+      {/* Visual dashed route — not interactive */}
       <Polyline
         positions={path.length > 0 ? path : [originCoord, destCoord]}
-        pathOptions={{
-          color: hovered ? hovRoute : dimRoute,
-          weight: 1.5,
-          dashArray: "5 10",
-          opacity: 1,
-          interactive: false,
-        }}
+        pathOptions={{ color: hovered ? hovRoute : dimRoute, weight: 1.5, dashArray: "5 10", opacity: 1, interactive: false }}
       />
-
-      {/* ── Invisible wide hit area — 24 px wide for easy hovering ── */}
+      {/* Wide invisible hit area for easy hovering */}
       <Polyline
         positions={path.length > 0 ? path : [originCoord, destCoord]}
-        pathOptions={{
-          color: "white",
-          weight: 24,
-          opacity: 0.001,
-          interactive: true,
-        }}
+        pathOptions={{ color: "white", weight: 24, opacity: 0.001, interactive: true }}
         eventHandlers={{
           mouseover: () => { setHovered(true); startAnim(); },
           mouseout: () => { setHovered(false); stopAnim(); },
@@ -259,8 +290,7 @@ function RouteLayer({
       >
         <Popup>{popup}</Popup>
       </Polyline>
-
-      {/* ── Destination dot ── */}
+      {/* Destination dot */}
       <CircleMarker
         center={destCoord}
         radius={hovered ? 8 : 4}

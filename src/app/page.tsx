@@ -12,7 +12,7 @@ const FEATURES = [
     href: "/app/calendar",
     color: "var(--city)",
     label: "One Way",
-    desc: "Browse 28 days at a glance and find the cheapest dates to fly.",
+    desc: "Know your destination? Plan a trip!",
   },
 ];
 

@@ -13,10 +13,12 @@ export default function ThemeToggle() {
   }, []);
 
   const toggle = () => {
+    document.documentElement.classList.add("theme-transitioning");
     const next = theme === "night" ? "day" : "night";
     setTheme(next);
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("wildmap-theme", next);
+    setTimeout(() => document.documentElement.classList.remove("theme-transitioning"), 600);
   };
 
   return (
