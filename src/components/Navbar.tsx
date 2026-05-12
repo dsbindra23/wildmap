@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -25,12 +26,12 @@ export default function Navbar() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-8" style={{ fontFamily: "var(--font-bebas, 'Bebas Neue')", letterSpacing: "0.12em", fontSize: 14 }}>
-          <Link href="/app" className="hover:opacity-70 transition-opacity" style={{ color: "var(--fg-2)" }}>Destinations</Link>
-          <Link href="/app/calendar" className="hover:opacity-70 transition-opacity" style={{ color: "var(--fg-2)" }}>Explore</Link>
-          <Link href="/faq" className="hover:opacity-70 transition-opacity" style={{ color: "var(--fg-2)" }}>FAQ</Link>
+          <Link href="/app" className="hover:opacity-70 transition-opacity" style={{ color: "var(--fg-2)" }}>Explore</Link>
+          <Link href="/app/calendar" className="hover:opacity-70 transition-opacity" style={{ color: "var(--fg-2)" }}>One Way</Link>
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
+          <ThemeToggle />
           {session ? (
             <>
               <Link href="/settings" className="hover:opacity-70 transition-opacity" style={{ fontFamily: "var(--font-bebas)", letterSpacing: "0.1em", fontSize: 14, color: "var(--fg-2)" }}>
@@ -66,9 +67,12 @@ export default function Navbar() {
           className="md:hidden border-t px-5 py-4 space-y-4"
           style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-2)", fontFamily: "var(--font-bebas)", letterSpacing: "0.12em", fontSize: 15 }}
         >
-          <Link href="/app" className="block" style={{ color: "var(--fg-2)" }} onClick={() => setOpen(false)}>Destinations</Link>
-          <Link href="/app/calendar" className="block" style={{ color: "var(--fg-2)" }} onClick={() => setOpen(false)}>Explore</Link>
-          <Link href="/faq" className="block" style={{ color: "var(--fg-2)" }} onClick={() => setOpen(false)}>FAQ</Link>
+          <Link href="/app" className="block" style={{ color: "var(--fg-2)" }} onClick={() => setOpen(false)}>Explore</Link>
+          <Link href="/app/calendar" className="block" style={{ color: "var(--fg-2)" }} onClick={() => setOpen(false)}>One Way</Link>
+          <div className="flex items-center gap-2" style={{ color: "var(--fg-2)" }}>
+            <span style={{ fontFamily: "var(--font-bebas)", letterSpacing: "0.12em", fontSize: 15 }}>Theme</span>
+            <ThemeToggle />
+          </div>
           {session ? (
             <button onClick={() => signOut()} className="block" style={{ color: "var(--fg-2)" }}>Sign out</button>
           ) : (

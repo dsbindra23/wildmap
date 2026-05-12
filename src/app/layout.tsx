@@ -39,6 +39,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${bebasNeue.variable} ${dmMono.variable} ${playfairDisplay.variable}`}
       suppressHydrationWarning
     >
+      {/* Runs before hydration — prevents flash of wrong theme */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){var t=localStorage.getItem('wildmap-theme')||'night';document.documentElement.setAttribute('data-theme',t);})();`,
+        }}
+      />
       <body suppressHydrationWarning>
         <Providers>
           <Navbar />

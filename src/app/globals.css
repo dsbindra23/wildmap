@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ── Design tokens ───────────────────────────────────────────── */
+/* ── Design tokens — Night (default) ─────────────────────────── */
 :root {
   --navy:      #060d1a;
   --navy-2:    #0d1b2e;
@@ -17,14 +17,37 @@
   --border-2:  rgba(255,255,255,0.14);
   --accent:    #e8f0f8;
   --accent-fg: #060d1a;
-
-  /* vibe colors */
   --beach:     #00d4b4;
   --mountain:  #4a90d9;
   --city:      #ff6b35;
   --desert:    #f5b041;
   --heartland: #a8c97f;
   --orange:    #ff7a1a;
+}
+
+/* ── Day theme override ───────────────────────────────────────── */
+[data-theme="day"] {
+  --navy:      #f8f6f0;
+  --navy-2:    #fffdf7;
+  --navy-3:    #fbf9f2;
+  --navy-4:    #ede8df;
+  --bg:        #f8f6f0;
+  --bg-2:      #fffdf7;
+  --bg-3:      #fbf9f2;
+  --bg-4:      #ede8df;
+  --fg:        #0f1f2e;
+  --fg-2:      #57534e;
+  --fg-3:      #78716c;
+  --border:    rgba(15,31,46,0.10);
+  --border-2:  rgba(15,31,46,0.20);
+  --accent:    #0f1f2e;
+  --accent-fg: #f8f6f0;
+  --beach:     #0d9488;
+  --mountain:  #1e40af;
+  --city:      #be123c;
+  --desert:    #ca8a04;
+  --heartland: #4d7c0f;
+  --orange:    #c2570a;
 }
 
 /* ── Base ────────────────────────────────────────────────────── */
@@ -45,6 +68,14 @@ body {
   font-family: var(--font-mono), 'DM Mono', monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Day mode uses subtle dark grid lines instead of white */
+[data-theme="day"] body {
+  background-image:
+    linear-gradient(rgba(15,31,46,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15,31,46,0.05) 1px, transparent 1px);
 }
 
 /* ── Utility classes ────────────────────────────────────────── */
