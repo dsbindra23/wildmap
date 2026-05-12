@@ -18,7 +18,7 @@
   --border-2:  rgba(255,255,255,0.14);
   --accent:    #e8f0f8;
   --accent-fg: #060d1a;
-  --beach:     #00d4b4;
+  --beach:     #00c4a8;
   --mountain:  #4a90d9;
   --city:      #ff6b35;
   --desert:    #f5b041;
@@ -48,7 +48,7 @@
   --border-2:  rgba(15,31,46,0.20);
   --accent:    #0f1f2e;
   --accent-fg: #f8f6f0;
-  --beach:     #0d9488;
+  --beach:     #0f1f2e;
   --mountain:  #1e40af;
   --city:      #be123c;
   --desert:    #ca8a04;
@@ -72,8 +72,7 @@ body {
   background-size: 40px 40px;
   color: var(--fg);
   /* System font stack — SF Pro on Apple, Segoe UI on Windows */
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
-               Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 15px;
   line-height: 1.55;
   letter-spacing: -0.01em;

@@ -10,7 +10,7 @@ export default function CalendarPage() {
         Explore Fares
       </h1>
       <p className="text-sm mb-8" style={{ color: "var(--fg-3)" }}>
-        Search any route and see 28 days of fares at a glance. Click any date to book on Frontier.
+        Pick a route and a start date, then tap any day to book on Frontier.
       </p>
       <FareCalendar />
     </div>

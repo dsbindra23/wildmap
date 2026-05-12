@@ -165,18 +165,26 @@ function RouteLayer({
     glowCoreRef.current = L.polyline([], { color: teal, weight: 2.5, opacity: 0.85 }).addTo(map);
 
     const id = planeId.current;
+    // SVG plane pointing RIGHT (East) at 0° rotation — cssRotation = screenAngle directly
+    const planeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -9 24 18" width="28" height="22" style="display:block">
+      <path d="M9,0 L-4,-2 L-9,-1.5 L-10.5,0 L-9,1.5 L-4,2 Z" fill="${teal}"/>
+      <path d="M0.5,-1.5 L-4.5,-9 L-6.5,-6 L-1.5,0 Z" fill="${teal}"/>
+      <path d="M0.5,1.5 L-4.5,9 L-6.5,6 L-1.5,0 Z" fill="${teal}"/>
+      <path d="M-8,-1.5 L-11.5,-5 L-10,-1.5 Z" fill="${teal}" opacity="0.8"/>
+      <path d="M-8,1.5 L-11.5,5 L-10,1.5 Z" fill="${teal}" opacity="0.8"/>
+    </svg>`;
     markerRef.current = L.marker(originCoord, {
       icon: L.divIcon({
-        html: `<span id="${id}" style="display:inline-block;color:${teal};font-size:20px;filter:drop-shadow(0 0 8px ${teal});pointer-events:none;line-height:1;will-change:transform;transform-origin:center center">✈</span>`,
+        html: `<div id="${id}" style="display:block;pointer-events:none;will-change:transform;transform-origin:center center">${planeSvg}</div>`,
         className: "",
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
+        iconSize: [28, 22],
+        iconAnchor: [14, 11],
       }),
       interactive: false,
       zIndexOffset: 1000,
     }).addTo(map);
 
-    const PIXELS_PER_SEC = 120;
+    const PIXELS_PER_SEC = 180;
 
     const animate = (timestamp: number) => {
       if (!isAnimating.current) return;
@@ -195,21 +203,19 @@ function RouteLayer({
       const lat = p0[0] + (p1[0] - p0[0]) * frac;
       const lng = p0[1] + (p1[1] - p0[1]) * frac;
 
-      // Screen-space bearing: convert adjacent path points to pixels, compute angle
-      // cssRotation = screenAngle + 45 because ✈ emoji faces NE (45°) at 0 CSS rotation
+      // Look 3 pts ahead for a stable bearing; SVG plane faces right so cssRotation = screenAngle
+      const aheadIdx = Math.min(idx + 3, path.length - 1);
       const pA = map.latLngToContainerPoint(p0);
-      const pB = map.latLngToContainerPoint(p1);
+      const pB = map.latLngToContainerPoint(path[aheadIdx]);
       const screenAngle = Math.atan2(pB.y - pA.y, pB.x - pA.x) * (180 / Math.PI);
-      const cssRotation = screenAngle + 45;
+      const cssRotation = screenAngle; // plane SVG points East at 0°
 
-      const scale = 1 + 0.35 * Math.sin(t * Math.PI);
-      const iconPx = Math.round(17 + scale * 5);
-      const glow = Math.round(7 + scale * 5);
+      const scale = 1 + 0.25 * Math.sin(t * Math.PI);
+      const glow = Math.round(6 + scale * 4);
 
       if (!planeElRef.current) planeElRef.current = document.getElementById(id) as HTMLElement | null;
       if (planeElRef.current) {
         planeElRef.current.style.transform = `rotate(${cssRotation.toFixed(1)}deg) scale(${scale.toFixed(3)})`;
-        planeElRef.current.style.fontSize = `${iconPx}px`;
         planeElRef.current.style.filter = `drop-shadow(0 0 ${glow}px ${teal}cc)`;
       }
       markerRef.current?.setLatLng([lat, lng]);
@@ -441,6 +447,8 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
       <MapContainer
         center={[38, -95]}
         zoom={4}
+        minZoom={3}
+        maxZoom={8}
         style={{ height: "100%", width: "100%", minHeight: 480, background: mapTheme === "day" ? "#f8f6f0" : "#060d1a" }}
         zoomControl={false}
       >

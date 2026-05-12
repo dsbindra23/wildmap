@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bebas_Neue, Playfair_Display } from "next/font/google";
+import { Bebas_Neue, Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
@@ -20,6 +20,12 @@ const playfairDisplay = Playfair_Display({
   display: "swap",
 });
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "WildMap",
   description: "Explore every destination you can reach with your Frontier GoWild pass.",
@@ -29,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${bebasNeue.variable} ${playfairDisplay.variable}`}
+      className={`${bebasNeue.variable} ${playfairDisplay.variable} ${inter.variable}`}
       suppressHydrationWarning
     >
       {/* Runs before hydration — prevents flash of wrong theme */}

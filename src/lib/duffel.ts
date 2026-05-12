@@ -56,6 +56,14 @@ export interface AirportResult {
   country: string;
 }
 
+function cleanCityName(raw: string): string {
+  return raw
+    .replace(/\s+(international|regional|municipal|executive|general)\s+airport\s*$/i, "")
+    .replace(/\s+airport\s*$/i, "")
+    .replace(/\s+intl\.?\s*$/i, "")
+    .trim();
+}
+
 export async function searchFlights(params: FlightSearchParams): Promise<SearchResult[]> {
   const response = await duffel.offerRequests.create({
     slices: [
@@ -85,8 +93,8 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
       id: offer.id,
       origin: slice.origin.iata_code || "",
       destination: slice.destination.iata_code || "",
-      originCity: (slice.origin as { city?: { name?: string }; name: string }).city?.name || slice.origin.name,
-      destinationCity: (slice.destination as { city?: { name?: string }; name: string }).city?.name || slice.destination.name,
+      originCity: cleanCityName((slice.origin as { city?: { name?: string }; name: string }).city?.name || slice.origin.name),
+      destinationCity: cleanCityName((slice.destination as { city?: { name?: string }; name: string }).city?.name || slice.destination.name),
       departureTime: firstSeg.departing_at,
       arrivalTime: lastSeg.arriving_at,
       duration: slice.duration || "",

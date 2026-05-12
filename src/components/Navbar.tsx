@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Plane } from "lucide-react";
 import { useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -22,13 +22,8 @@ export default function Navbar() {
     >
       <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
 
-        <Link href="/" style={{ fontFamily: "var(--font-bebas, 'Bebas Neue')", fontSize: 26, color: "var(--fg)", letterSpacing: "0.18em", display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <svg width="32" height="24" viewBox="0 0 32 24" fill="none" aria-hidden="true" style={{ display: "block", flexShrink: 0 }}>
-            <path d="M3 20 Q16 2 29 12" stroke="var(--beach)" strokeWidth="1.5" strokeDasharray="3 3.5" strokeLinecap="round"/>
-            <circle cx="3" cy="20" r="2.5" fill="var(--beach)"/>
-            <circle cx="29" cy="12" r="1.8" fill="var(--beach)" opacity="0.6"/>
-            <text x="16" y="10" dominantBaseline="central" textAnchor="middle" fontSize="11" fill="var(--beach)" transform="rotate(-30, 16, 10)">✈</text>
-          </svg>
+        <Link href="/" style={{ fontFamily: "var(--font-bebas, 'Bebas Neue')", fontSize: 26, color: "var(--fg)", letterSpacing: "0.18em", display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+          <Plane className="w-5 h-5" style={{ color: "var(--beach)", transform: "rotate(-30deg)" }} />
           WildMap
         </Link>
 

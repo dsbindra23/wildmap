@@ -1,4 +1,4 @@
-import OriginSearch from "@/components/OriginSearch";
+import TicketHero from "@/components/TicketHero";
 import Link from "next/link";
 
 const FEATURES = [
@@ -21,20 +21,20 @@ export default function Home() {
     <div>
       {/* Hero */}
       <section
-        className="flex flex-col items-center text-center px-5 pt-24 pb-16"
-        style={{ borderBottom: "1px solid var(--border)", background: "linear-gradient(180deg, rgba(0,212,180,0.05) 0%, transparent 100%)" }}
+        className="px-5 pt-20 pb-16"
+        style={{ borderBottom: "1px solid var(--border)", background: "linear-gradient(180deg, rgba(0,180,160,0.04) 0%, transparent 100%)" }}
       >
-        <h1
-          style={{ fontFamily: "var(--font-serif)", fontSize: "clamp(38px, 7vw, 72px)", fontWeight: 900, lineHeight: 1.08, color: "var(--fg)", marginBottom: 18 }}
-        >
-          Check where you can<br />fly with the pass
-        </h1>
-        <p className="text-sm max-w-sm leading-relaxed mb-10" style={{ color: "var(--fg-2)" }}>
-          Search every Frontier GoWild flight.
-        </p>
-        <div className="w-full max-w-md">
-          <OriginSearch />
+        <div className="text-center mb-10">
+          <h1
+            style={{ fontFamily: "var(--font-serif)", fontSize: "clamp(34px, 6vw, 64px)", fontWeight: 900, lineHeight: 1.08, color: "var(--fg)", marginBottom: 14 }}
+          >
+            Check where you can<br />fly with the pass
+          </h1>
+          <p style={{ fontSize: 15, color: "var(--fg-2)", maxWidth: 340, margin: "0 auto" }}>
+            Search every Frontier GoWild flight.
+          </p>
         </div>
+        <TicketHero />
       </section>
 
       {/* Feature cards */}

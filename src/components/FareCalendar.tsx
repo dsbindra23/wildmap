@@ -168,7 +168,7 @@ export default function FareCalendar() {
       {/* Search panel */}
       <div className="rounded-2xl border p-6 mb-6" style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-2)" }}>
         <div style={{ fontFamily: "var(--font-bebas)", fontSize: 11, letterSpacing: "0.3em", color: "var(--beach)", marginBottom: 16 }}>
-          ONE-WAY · GOWILD PASS · 28-DAY VIEW
+          ONE-WAY · GOWILD PASS
         </div>
 
         <div className="flex items-end gap-3 mb-5 flex-wrap">
@@ -190,7 +190,7 @@ export default function FareCalendar() {
             className="flex items-center gap-2 px-6 py-3 rounded-lg btn-primary disabled:opacity-40 transition-opacity shrink-0"
             style={{ fontSize: 14 }}>
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {loading ? "Searching..." : "Search 28 days"}
+            {loading ? "Searching..." : "Search Flights"}
           </button>
         </div>
 
@@ -235,7 +235,7 @@ export default function FareCalendar() {
                 {origin.city} → {destination.city}
               </div>
               <div style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.2em", color: "var(--fg-3)", marginTop: 3 }}>
-                {origin.iata} → {destination.iata} · 28 DAYS · ALL-IN PRICING
+                {origin.iata} → {destination.iata} · ALL-IN PRICING
               </div>
             </div>
             <div className="flex items-center gap-4 text-xs" style={{ color: "var(--fg-3)" }}>
@@ -278,8 +278,8 @@ export default function FareCalendar() {
 
       {!loading && displayed.length === 0 && (
         <div className="py-20 text-center">
-          <div style={{ fontFamily: "var(--font-serif)", fontSize: 28, color: "var(--fg-2)", marginBottom: 10 }}>Find the cheapest day to fly</div>
-          <div className="text-sm" style={{ color: "var(--fg-3)" }}>Select your route above and click Search to see 28 days of fares at once.</div>
+          <div style={{ fontFamily: "var(--font-serif)", fontSize: 28, color: "var(--fg-2)", marginBottom: 10 }}>Find the best time to fly</div>
+          <div className="text-sm" style={{ color: "var(--fg-3)" }}>Select your route and a start date, then hit Search to compare fares.</div>
         </div>
       )}
     </div>
