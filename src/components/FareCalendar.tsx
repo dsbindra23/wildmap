@@ -61,7 +61,7 @@ function AirportInput({ label, placeholder, onSelect }: {
           onChange={(e) => handleChange(e.target.value)}
           placeholder={placeholder}
           className="flex-1 bg-transparent outline-none text-sm"
-          style={{ color: "var(--fg)", fontFamily: "var(--font-mono)" }}
+          style={{ color: "var(--fg)", fontFamily: "var(--font-bebas)" }}
           onFocus={() => results.length > 0 && setOpen(true)}
         />
       </div>
@@ -183,7 +183,7 @@ export default function FareCalendar() {
             <label style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.25em", color: "var(--fg-3)", display: "block", marginBottom: 6 }}>FROM DATE</label>
             <div className="flex items-center gap-2 px-3 py-3 rounded-lg border" style={{ borderColor: "var(--border-2)", backgroundColor: "var(--bg-3)" }}>
               <input type="date" min={today} value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                className="flex-1 bg-transparent outline-none text-sm" style={{ color: "var(--fg)", fontFamily: "var(--font-mono)" }} />
+                className="flex-1 bg-transparent outline-none text-sm" style={{ color: "var(--fg)", fontFamily: "var(--font-bebas)" }} />
             </div>
           </div>
           <button onClick={search} disabled={loading || !origin.iata || !destination.iata}
@@ -265,7 +265,7 @@ export default function FareCalendar() {
                     className="rounded-md p-1.5 text-center transition-opacity hover:opacity-75"
                     style={{ backgroundColor: cs.backgroundColor, color: cs.color, border: `1px solid ${cs.borderColor}`, cursor: bookUrl ? "pointer" : "default" }}>
                     <div style={{ fontFamily: "var(--font-bebas)", fontSize: 14, letterSpacing: "0.05em" }}>{d.getDate()}</div>
-                    <div style={{ fontSize: 9, marginTop: 2, fontFamily: "var(--font-mono)" }} className="truncate">
+                    <div style={{ fontSize: 9, marginTop: 2, fontFamily: "var(--font-bebas)" }} className="truncate">
                       {day.price ? formatPrice(day.price, day.currency) : "—"}
                     </div>
                   </a>

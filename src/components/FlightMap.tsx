@@ -48,11 +48,11 @@ interface Props {
 
 interface AirportSuggestion { iataCode: string; city: string; name: string; }
 
-// Great-circle interpolation (Slerp on a sphere)
+// Slerp great-circle interpolation
 function greatCirclePoints(
   [lat1d, lon1d]: [number, number],
   [lat2d, lon2d]: [number, number],
-  n = 80
+  n = 100
 ): [number, number][] {
   const R = Math.PI / 180;
   const lat1 = lat1d * R, lon1 = lon1d * R;
@@ -61,7 +61,7 @@ function greatCirclePoints(
     Math.sin((lat2 - lat1) / 2) ** 2 +
     Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2
   ));
-  if (d < 0.001) return Array(n).fill([lat1d, lon1d]);
+  if (d < 0.001) return Array(n).fill([lat1d, lon1d] as [number, number]);
   return Array.from({ length: n }, (_, i) => {
     const t = i / (n - 1);
     const A = Math.sin((1 - t) * d) / Math.sin(d);
@@ -84,134 +84,189 @@ function MapFit({ coords }: { coords: [number, number][] }) {
   return null;
 }
 
-function RouteLayer({ flight, originCoord }: { flight: SearchResult; originCoord: [number, number] }) {
+let planeCounter = 0;
+
+function RouteLayer({
+  flight,
+  originCoord,
+  mapTheme,
+}: {
+  flight: SearchResult;
+  originCoord: [number, number];
+  mapTheme: "night" | "day";
+}) {
   const map = useMap();
   const destCoord = AIRPORT_COORDS[flight.destination];
   const [hovered, setHovered] = useState(false);
+
   const animRef = useRef<number | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
-  const traveledRef = useRef<L.Polyline | null>(null);
+  const glowHaloRef = useRef<L.Polyline | null>(null);
+  const glowCoreRef = useRef<L.Polyline | null>(null);
+  const planeElRef = useRef<HTMLElement | null>(null);
+  const planeId = useRef(`wm-plane-${++planeCounter}`);
   const tRef = useRef(0);
+  const isAnimating = useRef(false);
 
-  // Great-circle path computed once
-  const path = destCoord ? greatCirclePoints(originCoord, destCoord, 80) : ([] as [number, number][]);
+  const path = destCoord ? greatCirclePoints(originCoord, destCoord, 100) : ([] as [number, number][]);
+
+  // Colours that adapt to map theme
+  const teal = mapTheme === "day" ? "#0d9488" : "#00d4b4";
+  const dimRoute = mapTheme === "day" ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.09)";
+  const hovRoute = mapTheme === "day" ? "rgba(13,148,136,0.20)" : "rgba(0,212,180,0.15)";
 
   const stopAnim = () => {
-    if (animRef.current !== null) cancelAnimationFrame(animRef.current);
-    animRef.current = null;
+    isAnimating.current = false;
+    if (animRef.current !== null) { cancelAnimationFrame(animRef.current); animRef.current = null; }
     if (markerRef.current) { map.removeLayer(markerRef.current); markerRef.current = null; }
-    if (traveledRef.current) { map.removeLayer(traveledRef.current); traveledRef.current = null; }
+    if (glowHaloRef.current) { map.removeLayer(glowHaloRef.current); glowHaloRef.current = null; }
+    if (glowCoreRef.current) { map.removeLayer(glowCoreRef.current); glowCoreRef.current = null; }
+    planeElRef.current = null;
     tRef.current = 0;
   };
 
   const startAnim = () => {
-    if (!destCoord || path.length === 0) return;
+    if (isAnimating.current || !destCoord || path.length === 0) return;
+    isAnimating.current = true;
 
-    // Glowing traveled path
-    traveledRef.current = L.polyline([], {
-      color: "#00d4b4",
-      weight: 2.5,
-      opacity: 0.9,
+    // Layered glow trail
+    glowHaloRef.current = L.polyline([], {
+      color: teal, weight: 14, opacity: 0.07,
+    }).addTo(map);
+    glowCoreRef.current = L.polyline([], {
+      color: teal, weight: 2.5, opacity: 0.85,
     }).addTo(map);
 
-    // Initial plane marker
+    // Plane marker — created ONCE, mutated each frame via direct DOM ref
+    const id = planeId.current;
     markerRef.current = L.marker(originCoord, {
       icon: L.divIcon({
-        html: `<div style="color:#00d4b4;font-size:20px;filter:drop-shadow(0 0 6px #00d4b4);pointer-events:none;line-height:1">✈</div>`,
+        html: `<span id="${id}" style="display:inline-block;color:${teal};font-size:20px;filter:drop-shadow(0 0 8px ${teal});pointer-events:none;line-height:1;will-change:transform;transform-origin:center center">✈</span>`,
         className: "",
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
       }),
       interactive: false,
       zIndexOffset: 1000,
     }).addTo(map);
 
     const animate = () => {
-      tRef.current = (tRef.current + 0.002) % 1;
+      if (!isAnimating.current) return;
+
+      tRef.current += 0.0010; // ~16 s per loop at 60 fps
+      if (tRef.current >= 1) {
+        tRef.current = 0;
+        glowHaloRef.current?.setLatLngs([]);
+        glowCoreRef.current?.setLatLngs([]);
+      }
+
       const t = tRef.current;
       const rawIdx = t * (path.length - 1);
       const idx = Math.min(Math.floor(rawIdx), path.length - 2);
-      const pos = path[idx];
-      const next = path[idx + 1];
+      const frac = rawIdx - idx;
 
-      // Bearing from great-circle tangent
-      const dx = next[1] - pos[1];
-      const dy = next[0] - pos[0];
-      const bearing = Math.atan2(dx, dy) * (180 / Math.PI);
+      // Sub-point interpolation for silky smooth movement
+      const p0 = path[idx];
+      const p1 = path[idx + 1];
+      const lat = p0[0] + (p1[0] - p0[0]) * frac;
+      const lng = p0[1] + (p1[1] - p0[1]) * frac;
 
-      // 3D scale: icon grows at arc peak (t ≈ 0.5)
-      const scale = 1 + 0.7 * Math.sin(t * Math.PI);
-      const iconPx = Math.round(14 + scale * 10);
-      const glow = Math.round(5 + scale * 8);
+      // Mercator-corrected bearing (angle from north, clockwise)
+      const dLat = p1[0] - p0[0];
+      const dLng = p1[1] - p0[1];
+      const cosLat = Math.cos(lat * Math.PI / 180);
+      const bearingNorth = Math.atan2(dLng * cosLat, dLat) * (180 / Math.PI);
+      // ✈ emoji faces upper-right (~45° from north), so subtract 45° to align
+      const cssRotation = bearingNorth - 45;
 
-      markerRef.current?.setIcon(L.divIcon({
-        html: `<div style="color:#00d4b4;font-size:${iconPx}px;transform:rotate(${bearing}deg);filter:drop-shadow(0 0 ${glow}px #00d4b4cc);pointer-events:none;line-height:1">✈</div>`,
-        className: "",
-        iconSize: [iconPx + 12, iconPx + 12],
-        iconAnchor: [(iconPx + 12) / 2, (iconPx + 12) / 2],
-      }));
-      markerRef.current?.setLatLng(pos);
+      // Subtle 3D scale at arc peak
+      const scale = 1 + 0.35 * Math.sin(t * Math.PI);
+      const iconPx = Math.round(17 + scale * 5); // 17–23 px
+      const glow = Math.round(7 + scale * 5);
 
-      // Only the traveled segment glows
-      traveledRef.current?.setLatLngs(path.slice(0, idx + 2));
+      // Lazy DOM lookup (once, on first frame)
+      if (!planeElRef.current) {
+        planeElRef.current = document.getElementById(id) as HTMLElement | null;
+      }
+      // Direct DOM mutation — ZERO icon-recreation overhead
+      if (planeElRef.current) {
+        planeElRef.current.style.transform = `rotate(${cssRotation.toFixed(1)}deg) scale(${scale.toFixed(3)})`;
+        planeElRef.current.style.fontSize = `${iconPx}px`;
+        planeElRef.current.style.filter = `drop-shadow(0 0 ${glow}px ${teal}cc)`;
+      }
+      markerRef.current?.setLatLng([lat, lng]);
+
+      // Grow the traveled glow trail
+      const trail = [...path.slice(0, idx + 1), [lat, lng] as [number, number]];
+      glowHaloRef.current?.setLatLngs(trail);
+      glowCoreRef.current?.setLatLngs(trail);
 
       animRef.current = requestAnimationFrame(animate);
     };
     animRef.current = requestAnimationFrame(animate);
   };
 
+  // Cleanup on unmount
   useEffect(() => () => stopAnim(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!destCoord) return null;
 
   const bookUrl = `https://www.flyfrontier.com/flights/search?origin=${flight.origin}&destination=${flight.destination}&departDate=${flight.departureTime.split("T")[0]}&adults=1`;
 
-  const popupInner = (
-    <div style={{ fontFamily: "monospace", fontSize: 13, minWidth: 140, background: "#0d1b2e", color: "#e8f0f8", padding: 10, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)" }}>
-      <div style={{ fontFamily: "sans-serif", fontWeight: 700, marginBottom: 2 }}>
-        {flight.origin} → {flight.destination}
-      </div>
-      <div style={{ fontSize: 18, fontWeight: 800, color: "#ff7a1a", marginBottom: 4 }}>
+  const popup = (
+    <div style={{ fontFamily: "var(--font-bebas, sans-serif)", fontSize: 13, minWidth: 148, background: "#0d1b2e", color: "#e8f0f8", padding: 10, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)" }}>
+      <div style={{ fontSize: 15, letterSpacing: "0.08em", marginBottom: 2 }}>{flight.origin} → {flight.destination}</div>
+      <div style={{ fontSize: 22, letterSpacing: "0.04em", color: "#ff7a1a", marginBottom: 4 }}>
         {formatPrice(flight.price, flight.currency)}
       </div>
-      <div style={{ fontSize: 11, color: "#8ba0b8", marginBottom: 8 }}>{flight.destinationCity}</div>
+      <div style={{ fontSize: 11, color: "#8ba0b8", marginBottom: 8, letterSpacing: "0.1em" }}>{flight.destinationCity?.toUpperCase()}</div>
       <a
-        href={bookUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ display: "inline-block", background: "#e8f0f8", color: "#060d1a", fontSize: 11, padding: "4px 12px", borderRadius: 6, textDecoration: "none", fontWeight: 700 }}
+        href={bookUrl} target="_blank" rel="noopener noreferrer"
+        style={{ display: "inline-block", background: "#e8f0f8", color: "#060d1a", fontSize: 11, padding: "5px 13px", borderRadius: 6, textDecoration: "none", fontWeight: 700, letterSpacing: "0.08em" }}
       >
-        Book on Frontier →
+        BOOK ON FRONTIER →
       </a>
     </div>
   );
 
   return (
     <>
-      {/* Dim dashed great-circle background route */}
+      {/* ── Visual dashed background route — NOT interactive ── */}
       <Polyline
         positions={path.length > 0 ? path : [originCoord, destCoord]}
         pathOptions={{
-          color: hovered ? "rgba(0,212,180,0.22)" : "rgba(255,255,255,0.1)",
+          color: hovered ? hovRoute : dimRoute,
           weight: 1.5,
           dashArray: "5 10",
           opacity: 1,
+          interactive: false,
+        }}
+      />
+
+      {/* ── Invisible wide hit area — 24 px wide for easy hovering ── */}
+      <Polyline
+        positions={path.length > 0 ? path : [originCoord, destCoord]}
+        pathOptions={{
+          color: "white",
+          weight: 24,
+          opacity: 0.001,
+          interactive: true,
         }}
         eventHandlers={{
           mouseover: () => { setHovered(true); startAnim(); },
           mouseout: () => { setHovered(false); stopAnim(); },
         }}
       >
-        <Popup>{popupInner}</Popup>
+        <Popup>{popup}</Popup>
       </Polyline>
 
-      {/* Destination dot — glows on hover */}
+      {/* ── Destination dot ── */}
       <CircleMarker
         center={destCoord}
         radius={hovered ? 8 : 4}
         pathOptions={{
-          color: hovered ? "#00d4b4" : "rgba(255,255,255,0.4)",
-          fillColor: hovered ? "#00d4b4" : "#0d1b2e",
+          color: hovered ? teal : "rgba(255,255,255,0.35)",
+          fillColor: hovered ? teal : "#0d1b2e",
           fillOpacity: 0.9,
           weight: hovered ? 2 : 1,
         }}
@@ -220,7 +275,7 @@ function RouteLayer({ flight, originCoord }: { flight: SearchResult; originCoord
           mouseout: () => { setHovered(false); stopAnim(); },
         }}
       >
-        <Popup>{popupInner}</Popup>
+        <Popup>{popup}</Popup>
       </CircleMarker>
     </>
   );
@@ -259,14 +314,9 @@ function AirportSearch({ value, onChange }: { value: string; onChange: (iata: st
 
   return (
     <div className="relative" ref={ref}>
-      <input
-        value={query}
-        onChange={(e) => handleChange(e.target.value)}
-        placeholder="Home airport..."
-        className="bg-transparent outline-none text-xs w-36"
-        style={{ color: "#e8f0f8" }}
-        onFocus={() => results.length > 0 && setOpen(true)}
-      />
+      <input value={query} onChange={(e) => handleChange(e.target.value)} placeholder="Home airport..."
+        className="bg-transparent outline-none text-xs w-36" style={{ color: "#e8f0f8" }}
+        onFocus={() => results.length > 0 && setOpen(true)} />
       {open && results.length > 0 && (
         <div className="absolute z-[2000] top-full mt-1 w-52 rounded-lg overflow-hidden shadow-xl"
           style={{ backgroundColor: "#0d1b2e", border: "1px solid rgba(255,255,255,0.14)" }}>
@@ -290,6 +340,17 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
   const [flights, setFlights] = useState<SearchResult[]>(preloadedFlights || []);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(!!preloadedFlights?.length);
+  const [mapTheme, setMapTheme] = useState<"night" | "day">("night");
+
+  // Track the html[data-theme] attribute for tile switching
+  useEffect(() => {
+    const getTheme = () =>
+      (document.documentElement.getAttribute("data-theme") || "night") as "night" | "day";
+    setMapTheme(getTheme());
+    const obs = new MutationObserver(() => setMapTheme(getTheme()));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => obs.disconnect();
+  }, []);
 
   const search = async (originCode = origin) => {
     setLoading(true);
@@ -321,6 +382,12 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
   const originCoord = AIRPORT_COORDS[origin];
   const destCoords = flights.filter((f) => AIRPORT_COORDS[f.destination]).map((f) => AIRPORT_COORDS[f.destination]);
 
+  const tileUrl = mapTheme === "day"
+    ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+
+  const teal = mapTheme === "day" ? "#0d9488" : "#00d4b4";
+
   return (
     <div className="h-full w-full relative" style={{ minHeight: 480 }}>
       {!preloadedFlights && (
@@ -330,21 +397,13 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
         >
           <AirportSearch value={origin} onChange={setOrigin} />
           <div style={{ width: 1, height: 20, backgroundColor: "rgba(255,255,255,0.14)" }} />
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="text-xs outline-none bg-transparent"
-            style={{ color: "#8ba0b8" }}
-          />
-          <button
-            onClick={() => search()}
-            disabled={loading}
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+            className="text-xs outline-none bg-transparent" style={{ color: "#8ba0b8" }} />
+          <button onClick={() => search()} disabled={loading}
             className="flex items-center gap-1.5 disabled:opacity-50"
-            style={{ fontFamily: "var(--font-bebas, sans-serif)", letterSpacing: "0.1em", fontSize: 13, color: "#00d4b4" }}
-          >
+            style={{ fontFamily: "var(--font-bebas, sans-serif)", letterSpacing: "0.1em", fontSize: 13, color: teal }}>
             {loading && <Loader2 className="w-3 h-3 animate-spin" />}
-            {loading ? "Loading" : "Show"}
+            {loading ? "LOADING" : "SHOW"}
           </button>
         </div>
       )}
@@ -352,28 +411,30 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
       <MapContainer
         center={[38, -95]}
         zoom={4}
-        style={{ height: "100%", width: "100%", minHeight: 480, background: "#060d1a" }}
+        style={{ height: "100%", width: "100%", minHeight: 480, background: mapTheme === "day" ? "#f8f6f0" : "#060d1a" }}
         zoomControl={false}
       >
+        {/* Tile layer switches with theme — key forces remount */}
         <TileLayer
+          key={mapTheme}
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url={tileUrl}
         />
 
         {destCoords.length > 1 && <MapFit coords={destCoords} />}
 
-        {/* Origin — glowing teal dot with outer ring */}
+        {/* Origin — glowing dot with soft outer ring */}
         {originCoord && (
           <>
             <CircleMarker
               center={originCoord}
-              radius={14}
-              pathOptions={{ color: "#00d4b4", fillColor: "transparent", fillOpacity: 0, weight: 1, opacity: 0.25 }}
+              radius={16}
+              pathOptions={{ color: teal, fillColor: "transparent", fillOpacity: 0, weight: 1, opacity: 0.2, interactive: false }}
             />
             <CircleMarker
               center={originCoord}
               radius={7}
-              pathOptions={{ color: "#00d4b4", fillColor: "#00d4b4", fillOpacity: 1, weight: 0 }}
+              pathOptions={{ color: teal, fillColor: teal, fillOpacity: 1, weight: 0 }}
             >
               <Popup>
                 <div style={{ background: "#0d1b2e", color: "#e8f0f8", padding: "8px 12px", borderRadius: 8, fontSize: 13, border: "1px solid rgba(255,255,255,0.1)" }}>
@@ -385,7 +446,7 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
         )}
 
         {originCoord && flights.filter((f) => AIRPORT_COORDS[f.destination]).map((f) => (
-          <RouteLayer key={f.id} flight={f} originCoord={originCoord} />
+          <RouteLayer key={f.id} flight={f} originCoord={originCoord} mapTheme={mapTheme} />
         ))}
       </MapContainer>
 
@@ -393,7 +454,7 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
             style={{ backgroundColor: "rgba(13,27,46,0.95)", color: "#8ba0b8", border: "1px solid rgba(255,255,255,0.14)" }}>
-            <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#00d4b4" }} />
+            <Loader2 className="w-4 h-4 animate-spin" style={{ color: teal }} />
             <span style={{ fontFamily: "monospace" }}>Fetching routes...</span>
           </div>
         </div>

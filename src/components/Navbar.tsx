@@ -14,14 +14,16 @@ export default function Navbar() {
     <header
       style={{
         borderBottom: "1px solid var(--border)",
-        backgroundColor: "rgba(6,13,26,0.92)",
-        backdropFilter: "blur(12px)",
+        backgroundColor: "var(--navbar-bg)",
+        backdropFilter: "blur(14px)",
+        transition: "background-color 0.3s ease",
       }}
       className="sticky top-0 z-50"
     >
       <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
 
-        <Link href="/" style={{ fontFamily: "var(--font-bebas, 'Bebas Neue')", fontSize: 22, color: "var(--fg)", letterSpacing: "0.15em" }}>
+        <Link href="/" style={{ fontFamily: "var(--font-bebas, 'Bebas Neue')", fontSize: 26, color: "var(--fg)", letterSpacing: "0.18em", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ color: "var(--beach)", fontSize: 20 }}>◈</span>
           WildMap
         </Link>
 

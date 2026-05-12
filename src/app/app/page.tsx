@@ -136,7 +136,7 @@ function ListRow({ flight }: { flight: SearchResult }) {
       {/* Price + book */}
       <div className="shrink-0 flex items-center gap-4">
         <div className="text-right">
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 500, color: "var(--orange)", lineHeight: 1 }}>
+          <div style={{ fontFamily: "var(--font-bebas)", fontSize: 22, fontWeight: 500, color: "var(--orange)", lineHeight: 1 }}>
             {formatPrice(flight.price, flight.currency)}
           </div>
           <div className="text-xs mt-0.5" style={{ color: "var(--fg-3)" }}>all-in</div>
@@ -180,14 +180,14 @@ function GridCard({ flight }: { flight: SearchResult }) {
         </div>
         <div className="text-right">
           <div className="text-xs" style={{ color: "var(--fg-3)" }}>{formatDuration(flight.duration)}</div>
-          <div className="text-xs mt-0.5" style={{ color: "var(--fg-2)", fontFamily: "var(--font-mono)" }}>
+          <div className="text-xs mt-0.5" style={{ color: "var(--fg-2)", fontFamily: "var(--font-bebas)" }}>
             {formatTime(flight.departureTime)} → {formatTime(flight.arrivalTime)}
           </div>
         </div>
       </div>
       <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
         <div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 20, fontWeight: 500, color: "var(--orange)", lineHeight: 1 }}>
+          <div style={{ fontFamily: "var(--font-bebas)", fontSize: 20, fontWeight: 500, color: "var(--orange)", lineHeight: 1 }}>
             {formatPrice(flight.price, flight.currency)}
           </div>
           <div className="text-xs mt-0.5" style={{ color: "var(--fg-3)" }}>all-in</div>
@@ -208,18 +208,13 @@ function GridCard({ flight }: { flight: SearchResult }) {
 
 function RegionHeader({ region, count }: { region: string; count: number }) {
   return (
-    <div
-      style={{
-        fontFamily: "var(--font-bebas)",
-        fontSize: 11,
-        letterSpacing: "0.3em",
-        color: "var(--beach)",
-        paddingBottom: 8,
-        marginBottom: 10,
-        borderBottom: "1px solid var(--border)",
-      }}
-    >
-      {region.toUpperCase()} &mdash; {count} {count === 1 ? "DESTINATION" : "DESTINATIONS"}
+    <div style={{ marginBottom: 16, paddingBottom: 10, borderBottom: "1px solid var(--border)", display: "flex", alignItems: "baseline", gap: 14 }}>
+      <span style={{ fontFamily: "var(--font-serif)", fontSize: 30, fontWeight: 900, color: "var(--fg)", lineHeight: 1 }}>
+        {region}
+      </span>
+      <span style={{ fontFamily: "var(--font-bebas)", fontSize: 12, letterSpacing: "0.28em", color: "var(--beach)" }}>
+        {count} {count === 1 ? "DESTINATION" : "DESTINATIONS"}
+      </span>
     </div>
   );
 }
@@ -312,7 +307,7 @@ function ExploreContent() {
               backgroundColor: "var(--bg-2)",
               border: "1px solid var(--border)",
               color: "var(--fg-2)",
-              fontFamily: "var(--font-mono)",
+              fontFamily: "var(--font-bebas)",
               fontSize: 13,
             }}
           />

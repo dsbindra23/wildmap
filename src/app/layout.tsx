@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bebas_Neue, DM_Mono, Playfair_Display } from "next/font/google";
+import { Bebas_Neue, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
@@ -9,13 +9,6 @@ const bebasNeue = Bebas_Neue({
   weight: "400",
   subsets: ["latin"],
   variable: "--font-bebas",
-  display: "swap",
-});
-
-const dmMono = DM_Mono({
-  weight: ["400", "500"],
-  subsets: ["latin"],
-  variable: "--font-mono",
   display: "swap",
 });
 
@@ -36,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${bebasNeue.variable} ${dmMono.variable} ${playfairDisplay.variable}`}
+      className={`${bebasNeue.variable} ${playfairDisplay.variable}`}
       suppressHydrationWarning
     >
       {/* Runs before hydration — prevents flash of wrong theme */}
