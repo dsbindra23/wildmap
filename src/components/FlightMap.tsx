@@ -9,48 +9,35 @@ import type { SearchResult } from "@/lib/duffel";
 import { formatPrice } from "@/lib/utils";
 
 const AIRPORT_COORDS: Record<string, [number, number]> = {
-  // Northeast
   JFK: [40.6413, -73.7781], LGA: [40.7769, -73.874], EWR: [40.6895, -74.1745],
   BOS: [42.3656, -71.0096], BUF: [42.9405, -78.7322], BDL: [41.9389, -72.6832],
   SYR: [43.1112, -76.1063],
-  // Mid-Atlantic
   PHL: [39.8729, -75.2437], BWI: [39.1754, -76.6682], DCA: [38.8512, -77.0402],
   IAD: [38.9531, -77.4565], PIT: [40.4917, -80.2329], RIC: [37.5052, -77.3197],
   ORF: [36.8976, -76.0178],
-  // Southeast
   ATL: [33.6407, -84.4277], CLT: [35.2144, -80.9473], RDU: [35.8801, -78.788],
   MIA: [25.7959, -80.287], FLL: [26.0726, -80.1527], TPA: [27.9755, -82.5332],
   MCO: [28.4294, -81.3089], PBI: [26.6832, -80.0956], RSW: [26.5362, -81.7552],
   SRQ: [27.3954, -82.5544], JAX: [30.4941, -81.6879], MSY: [29.9902, -90.258],
   BNA: [36.1245, -86.6782], MEM: [35.0424, -89.9767], CHS: [32.8987, -80.0405],
-  // Midwest
   ORD: [41.9742, -87.9073], MDW: [41.7868, -87.7522], DTW: [42.2162, -83.3554],
   MSP: [44.8848, -93.2223], MCI: [39.2976, -94.7139], STL: [38.7487, -90.37],
   CMH: [39.998, -82.8919], CLE: [41.4117, -81.8498], CVG: [39.0488, -84.6678],
   IND: [39.7173, -86.2944], MKE: [42.9472, -87.8966], GRR: [42.8808, -85.5228],
   OMA: [41.3032, -95.8941], OKC: [35.3931, -97.6007], XNA: [36.2819, -94.3069],
-  // Texas
   DFW: [32.8998, -97.0403], AUS: [30.1975, -97.6664], HOU: [29.6454, -95.2789],
   SAT: [29.5337, -98.4698], ELP: [31.8072, -106.3779],
-  // Mountain West
   DEN: [39.8561, -104.6737], SLC: [40.7899, -111.9791], BOI: [43.5644, -116.2228],
   RNO: [39.4991, -119.7681],
-  // Southwest
   LAS: [36.084, -115.1537], PHX: [33.4373, -112.0078], TUS: [32.1161, -110.941],
-  // Pacific
   LAX: [33.9425, -118.4081], SFO: [37.6213, -122.379], SAN: [32.7338, -117.1933],
   BUR: [34.2006, -118.3584], ONT: [34.056, -117.6012], SNA: [33.6757, -117.8682],
   SJC: [37.3626, -121.929], SMF: [38.6954, -121.5908],
-  // Pacific NW
   SEA: [47.4502, -122.3088], PDX: [45.5898, -122.5951], GEG: [47.6199, -117.5338],
-  // US Territories
   SJU: [18.4394, -66.0018],
-  // Mexico
   CUN: [21.0365, -86.8771], PVR: [20.6801, -105.2544], SJD: [23.1518, -109.7215],
   GDL: [20.5218, -103.3111], MZT: [23.1614, -106.2661],
-  // Caribbean
   PUJ: [18.5674, -68.3634], SDQ: [18.4297, -69.6689],
-  // Central America
   GUA: [14.5833, -90.5275], SAL: [13.4409, -89.0557],
 };
 
@@ -61,6 +48,34 @@ interface Props {
 
 interface AirportSuggestion { iataCode: string; city: string; name: string; }
 
+// Great-circle interpolation (Slerp on a sphere)
+function greatCirclePoints(
+  [lat1d, lon1d]: [number, number],
+  [lat2d, lon2d]: [number, number],
+  n = 80
+): [number, number][] {
+  const R = Math.PI / 180;
+  const lat1 = lat1d * R, lon1 = lon1d * R;
+  const lat2 = lat2d * R, lon2 = lon2d * R;
+  const d = 2 * Math.asin(Math.sqrt(
+    Math.sin((lat2 - lat1) / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2
+  ));
+  if (d < 0.001) return Array(n).fill([lat1d, lon1d]);
+  return Array.from({ length: n }, (_, i) => {
+    const t = i / (n - 1);
+    const A = Math.sin((1 - t) * d) / Math.sin(d);
+    const B = Math.sin(t * d) / Math.sin(d);
+    const x = A * Math.cos(lat1) * Math.cos(lon1) + B * Math.cos(lat2) * Math.cos(lon2);
+    const y = A * Math.cos(lat1) * Math.sin(lon1) + B * Math.cos(lat2) * Math.sin(lon2);
+    const z = A * Math.sin(lat1) + B * Math.sin(lat2);
+    return [
+      Math.atan2(z, Math.sqrt(x ** 2 + y ** 2)) / R,
+      Math.atan2(y, x) / R,
+    ] as [number, number];
+  });
+}
+
 function MapFit({ coords }: { coords: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
@@ -69,91 +84,133 @@ function MapFit({ coords }: { coords: [number, number][] }) {
   return null;
 }
 
-// Animated plane route layer — uses imperative Leaflet for animation control
 function RouteLayer({ flight, originCoord }: { flight: SearchResult; originCoord: [number, number] }) {
   const map = useMap();
   const destCoord = AIRPORT_COORDS[flight.destination];
   const [hovered, setHovered] = useState(false);
   const animRef = useRef<number | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const traveledRef = useRef<L.Polyline | null>(null);
   const tRef = useRef(0);
+
+  // Great-circle path computed once
+  const path = destCoord ? greatCirclePoints(originCoord, destCoord, 80) : ([] as [number, number][]);
 
   const stopAnim = () => {
     if (animRef.current !== null) cancelAnimationFrame(animRef.current);
     animRef.current = null;
     if (markerRef.current) { map.removeLayer(markerRef.current); markerRef.current = null; }
+    if (traveledRef.current) { map.removeLayer(traveledRef.current); traveledRef.current = null; }
     tRef.current = 0;
   };
 
   const startAnim = () => {
-    if (!destCoord) return;
-    const dLat = destCoord[0] - originCoord[0];
-    const dLon = destCoord[1] - originCoord[1];
-    const angleDeg = Math.atan2(dLon, dLat) * 180 / Math.PI;
+    if (!destCoord || path.length === 0) return;
 
-    const icon = L.divIcon({
-      html: `<div style="color:#00d4b4;font-size:15px;transform:rotate(${angleDeg}deg);filter:drop-shadow(0 0 5px #00d4b4);pointer-events:none">✈</div>`,
-      className: "",
-      iconSize: [18, 18],
-      iconAnchor: [9, 9],
-    });
-    markerRef.current = L.marker(originCoord, { icon, interactive: false, zIndexOffset: 1000 }).addTo(map);
+    // Glowing traveled path
+    traveledRef.current = L.polyline([], {
+      color: "#00d4b4",
+      weight: 2.5,
+      opacity: 0.9,
+    }).addTo(map);
+
+    // Initial plane marker
+    markerRef.current = L.marker(originCoord, {
+      icon: L.divIcon({
+        html: `<div style="color:#00d4b4;font-size:20px;filter:drop-shadow(0 0 6px #00d4b4);pointer-events:none;line-height:1">✈</div>`,
+        className: "",
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      }),
+      interactive: false,
+      zIndexOffset: 1000,
+    }).addTo(map);
 
     const animate = () => {
-      tRef.current = (tRef.current + 0.004) % 1;
-      const lat = originCoord[0] + dLat * tRef.current;
-      const lng = originCoord[1] + dLon * tRef.current;
-      markerRef.current?.setLatLng([lat, lng]);
+      tRef.current = (tRef.current + 0.002) % 1;
+      const t = tRef.current;
+      const rawIdx = t * (path.length - 1);
+      const idx = Math.min(Math.floor(rawIdx), path.length - 2);
+      const pos = path[idx];
+      const next = path[idx + 1];
+
+      // Bearing from great-circle tangent
+      const dx = next[1] - pos[1];
+      const dy = next[0] - pos[0];
+      const bearing = Math.atan2(dx, dy) * (180 / Math.PI);
+
+      // 3D scale: icon grows at arc peak (t ≈ 0.5)
+      const scale = 1 + 0.7 * Math.sin(t * Math.PI);
+      const iconPx = Math.round(14 + scale * 10);
+      const glow = Math.round(5 + scale * 8);
+
+      markerRef.current?.setIcon(L.divIcon({
+        html: `<div style="color:#00d4b4;font-size:${iconPx}px;transform:rotate(${bearing}deg);filter:drop-shadow(0 0 ${glow}px #00d4b4cc);pointer-events:none;line-height:1">✈</div>`,
+        className: "",
+        iconSize: [iconPx + 12, iconPx + 12],
+        iconAnchor: [(iconPx + 12) / 2, (iconPx + 12) / 2],
+      }));
+      markerRef.current?.setLatLng(pos);
+
+      // Only the traveled segment glows
+      traveledRef.current?.setLatLngs(path.slice(0, idx + 2));
+
       animRef.current = requestAnimationFrame(animate);
     };
     animRef.current = requestAnimationFrame(animate);
   };
 
-  useEffect(() => () => stopAnim(), []); // cleanup on unmount
+  useEffect(() => () => stopAnim(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!destCoord) return null;
 
+  const bookUrl = `https://www.flyfrontier.com/flights/search?origin=${flight.origin}&destination=${flight.destination}&departDate=${flight.departureTime.split("T")[0]}&adults=1`;
+
+  const popupInner = (
+    <div style={{ fontFamily: "monospace", fontSize: 13, minWidth: 140, background: "#0d1b2e", color: "#e8f0f8", padding: 10, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)" }}>
+      <div style={{ fontFamily: "sans-serif", fontWeight: 700, marginBottom: 2 }}>
+        {flight.origin} → {flight.destination}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: "#ff7a1a", marginBottom: 4 }}>
+        {formatPrice(flight.price, flight.currency)}
+      </div>
+      <div style={{ fontSize: 11, color: "#8ba0b8", marginBottom: 8 }}>{flight.destinationCity}</div>
+      <a
+        href={bookUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: "inline-block", background: "#e8f0f8", color: "#060d1a", fontSize: 11, padding: "4px 12px", borderRadius: 6, textDecoration: "none", fontWeight: 700 }}
+      >
+        Book on Frontier →
+      </a>
+    </div>
+  );
+
   return (
     <>
+      {/* Dim dashed great-circle background route */}
       <Polyline
-        positions={[originCoord, destCoord]}
+        positions={path.length > 0 ? path : [originCoord, destCoord]}
         pathOptions={{
-          color: hovered ? "#00d4b4" : "rgba(255,255,255,0.18)",
-          weight: hovered ? 2 : 1.5,
-          dashArray: "6 9",
-          opacity: hovered ? 1 : 0.55,
+          color: hovered ? "rgba(0,212,180,0.22)" : "rgba(255,255,255,0.1)",
+          weight: 1.5,
+          dashArray: "5 10",
+          opacity: 1,
         }}
         eventHandlers={{
           mouseover: () => { setHovered(true); startAnim(); },
           mouseout: () => { setHovered(false); stopAnim(); },
         }}
       >
-        <Popup>
-          <div style={{ fontFamily: "monospace", fontSize: 13, minWidth: 140, background: "#0d1b2e", color: "#e8f0f8", padding: 10, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)" }}>
-            <div style={{ fontFamily: "sans-serif", fontWeight: 700, marginBottom: 2 }}>
-              {flight.origin} → {flight.destination}
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#ff7a1a", marginBottom: 4 }}>
-              {formatPrice(flight.price, flight.currency)}
-            </div>
-            <div style={{ fontSize: 11, color: "#8ba0b8", marginBottom: 8 }}>{flight.destinationCity}</div>
-            <a
-              href={`https://www.flyfrontier.com/flights/search?origin=${flight.origin}&destination=${flight.destination}&departDate=${flight.departureTime.split("T")[0]}&adults=1`}
-              target="_blank" rel="noopener noreferrer"
-              style={{ display: "inline-block", background: "#e8f0f8", color: "#060d1a", fontSize: 11, padding: "4px 12px", borderRadius: 6, textDecoration: "none", fontWeight: 700 }}
-            >
-              Book on Frontier →
-            </a>
-          </div>
-        </Popup>
+        <Popup>{popupInner}</Popup>
       </Polyline>
 
-      {/* Destination dot */}
+      {/* Destination dot — glows on hover */}
       <CircleMarker
         center={destCoord}
-        radius={hovered ? 7 : 5}
+        radius={hovered ? 8 : 4}
         pathOptions={{
-          color: hovered ? "#00d4b4" : "rgba(255,255,255,0.5)",
+          color: hovered ? "#00d4b4" : "rgba(255,255,255,0.4)",
           fillColor: hovered ? "#00d4b4" : "#0d1b2e",
           fillOpacity: 0.9,
           weight: hovered ? 2 : 1,
@@ -163,24 +220,7 @@ function RouteLayer({ flight, originCoord }: { flight: SearchResult; originCoord
           mouseout: () => { setHovered(false); stopAnim(); },
         }}
       >
-        <Popup>
-          <div style={{ fontFamily: "monospace", fontSize: 13, minWidth: 140, background: "#0d1b2e", color: "#e8f0f8", padding: 10, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)" }}>
-            <div style={{ fontFamily: "sans-serif", fontWeight: 700, marginBottom: 2 }}>
-              {flight.origin} → {flight.destination}
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#ff7a1a", marginBottom: 4 }}>
-              {formatPrice(flight.price, flight.currency)}
-            </div>
-            <div style={{ fontSize: 11, color: "#8ba0b8", marginBottom: 8 }}>{flight.destinationCity}</div>
-            <a
-              href={`https://www.flyfrontier.com/flights/search?origin=${flight.origin}&destination=${flight.destination}&departDate=${flight.departureTime.split("T")[0]}&adults=1`}
-              target="_blank" rel="noopener noreferrer"
-              style={{ display: "inline-block", background: "#e8f0f8", color: "#060d1a", fontSize: 11, padding: "4px 12px", borderRadius: 6, textDecoration: "none", fontWeight: 700 }}
-            >
-              Book on Frontier →
-            </a>
-          </div>
-        </Popup>
+        <Popup>{popupInner}</Popup>
       </CircleMarker>
     </>
   );
@@ -283,7 +323,6 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
 
   return (
     <div className="h-full w-full relative" style={{ minHeight: 480 }}>
-      {/* Floating controls — only on standalone map page */}
       {!preloadedFlights && (
         <div
           className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-3 px-4 py-2.5 rounded-xl shadow-lg"
@@ -316,7 +355,6 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
         style={{ height: "100%", width: "100%", minHeight: 480, background: "#060d1a" }}
         zoomControl={false}
       >
-        {/* CartoDB Dark Matter — matches navy theme */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -324,22 +362,28 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
 
         {destCoords.length > 1 && <MapFit coords={destCoords} />}
 
-        {/* Origin marker */}
+        {/* Origin — glowing teal dot with outer ring */}
         {originCoord && (
-          <CircleMarker
-            center={originCoord}
-            radius={7}
-            pathOptions={{ color: "#00d4b4", fillColor: "#00d4b4", fillOpacity: 1, weight: 0 }}
-          >
-            <Popup>
-              <div style={{ background: "#0d1b2e", color: "#e8f0f8", padding: "8px 12px", borderRadius: 8, fontSize: 13, border: "1px solid rgba(255,255,255,0.1)" }}>
-                <strong>{origin}</strong> — your origin
-              </div>
-            </Popup>
-          </CircleMarker>
+          <>
+            <CircleMarker
+              center={originCoord}
+              radius={14}
+              pathOptions={{ color: "#00d4b4", fillColor: "transparent", fillOpacity: 0, weight: 1, opacity: 0.25 }}
+            />
+            <CircleMarker
+              center={originCoord}
+              radius={7}
+              pathOptions={{ color: "#00d4b4", fillColor: "#00d4b4", fillOpacity: 1, weight: 0 }}
+            >
+              <Popup>
+                <div style={{ background: "#0d1b2e", color: "#e8f0f8", padding: "8px 12px", borderRadius: 8, fontSize: 13, border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <strong>{origin}</strong> — your origin
+                </div>
+              </Popup>
+            </CircleMarker>
+          </>
         )}
 
-        {/* Dotted animated routes */}
         {originCoord && flights.filter((f) => AIRPORT_COORDS[f.destination]).map((f) => (
           <RouteLayer key={f.id} flight={f} originCoord={originCoord} />
         ))}

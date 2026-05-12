@@ -1,13 +1,12 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import OriginSearch from "@/components/OriginSearch";
 import type { SearchResult } from "@/lib/duffel";
 import { Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { formatTime, formatDuration, formatPrice } from "@/lib/utils";
-import Link from "next/link";
 
 const FlightMap = dynamic(() => import("@/components/FlightMap"), { ssr: false });
 
@@ -16,7 +15,6 @@ const POPULAR_DESTINATIONS = [
   "MCO","SFO","DCA","CLT","TPA","SAN","AUS","BNA","PDX","SLC",
 ];
 
-// Vibe lookup for color-coded cards
 const VIBE: Record<string, string> = {
   FLL:"beach",MIA:"beach",TPA:"beach",MCO:"city",PBI:"beach",RSW:"beach",SRQ:"beach",CHS:"beach",JAX:"beach",
   SAN:"beach",SNA:"beach",SJU:"beach",CUN:"beach",MZT:"beach",PVR:"beach",SJD:"beach",PUJ:"beach",SDQ:"beach",ORF:"beach",
@@ -33,14 +31,37 @@ const VIBE_COLORS: Record<string, string> = {
   beach: "var(--beach)", mountain: "var(--mountain)", city: "var(--city)",
   desert: "var(--desert)", heartland: "var(--heartland)",
 };
-function vibeLabel(iata: string) {
-  return VIBE[iata] ?? "city";
-}
-function accentColor(iata: string) {
-  return VIBE_COLORS[VIBE[iata]] ?? "var(--beach)";
-}
+function vibeLabel(iata: string) { return VIBE[iata] ?? "city"; }
+function accentColor(iata: string) { return VIBE_COLORS[VIBE[iata]] ?? "var(--beach)"; }
+
+const REGION_MAP: Record<string, string> = {
+  BOS:"East Coast", BDL:"East Coast", BUF:"East Coast", SYR:"East Coast",
+  PHL:"East Coast", BWI:"East Coast", DCA:"East Coast", IAD:"East Coast",
+  PIT:"East Coast", RIC:"East Coast", ORF:"East Coast",
+  JFK:"East Coast", LGA:"East Coast", EWR:"East Coast",
+  ATL:"East Coast", CLT:"East Coast", RDU:"East Coast",
+  MIA:"East Coast", FLL:"East Coast", TPA:"East Coast", MCO:"East Coast",
+  PBI:"East Coast", RSW:"East Coast", SRQ:"East Coast", JAX:"East Coast",
+  CHS:"East Coast", BNA:"East Coast", MEM:"East Coast", MSY:"East Coast",
+  ORD:"Central", MDW:"Central", DTW:"Central", MSP:"Central",
+  MCI:"Central", STL:"Central", CMH:"Central", CLE:"Central",
+  CVG:"Central", IND:"Central", MKE:"Central", GRR:"Central",
+  OMA:"Central", OKC:"Central", XNA:"Central",
+  DFW:"Central", AUS:"Central", HOU:"Central", SAT:"Central", ELP:"Central",
+  DEN:"Central", SLC:"Central", BOI:"Central", RNO:"Central",
+  LAX:"West Coast", SFO:"West Coast", SAN:"West Coast", BUR:"West Coast",
+  ONT:"West Coast", SNA:"West Coast", SJC:"West Coast", SMF:"West Coast",
+  SEA:"West Coast", PDX:"West Coast", GEG:"West Coast",
+  LAS:"West Coast", PHX:"West Coast", TUS:"West Coast",
+  SJU:"International", CUN:"International", PVR:"International",
+  SJD:"International", GDL:"International", MZT:"International",
+  PUJ:"International", SDQ:"International", GUA:"International", SAL:"International",
+};
+const REGION_ORDER = ["East Coast", "Central", "West Coast", "International"];
+function getRegion(iata: string) { return REGION_MAP[iata] ?? "Other"; }
 
 type View = "list" | "grid" | "map";
+type StopsFilter = "any" | "0" | "1";
 
 function ViewToggle({ view, setView }: { view: View; setView: (v: View) => void }) {
   const views: View[] = ["list", "grid", "map"];
@@ -79,13 +100,15 @@ function ListRow({ flight }: { flight: SearchResult }) {
       className="flex items-center gap-5 px-5 py-4 rounded-xl transition-all hover:opacity-90"
       style={{ backgroundColor: "var(--bg-2)", border: "1px solid var(--border)", borderLeftWidth: 4, borderLeftColor: color }}
     >
-      {/* Destination — most prominent */}
-      <div style={{ minWidth: 140 }}>
-        <div style={{ fontFamily: "var(--font-bebas)", fontSize: 32, letterSpacing: "0.04em", color: "var(--fg)", lineHeight: 1 }}>
+      {/* City name — most prominent */}
+      <div style={{ minWidth: 160 }}>
+        <div style={{ fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 700, color: "var(--fg)", lineHeight: 1.2 }}>
+          {flight.destinationCity}
+        </div>
+        <div style={{ fontFamily: "var(--font-bebas)", fontSize: 11, letterSpacing: "0.15em", color: "var(--fg-3)", marginTop: 2 }}>
           {flight.destination}
         </div>
-        <div className="text-sm mt-0.5" style={{ color: "var(--fg-2)" }}>{flight.destinationCity}</div>
-        <div style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.15em", color, marginTop: 3 }}>
+        <div style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.15em", color, marginTop: 2 }}>
           {vibeLabel(flight.destination).toUpperCase()}
         </div>
       </div>
@@ -93,7 +116,7 @@ function ListRow({ flight }: { flight: SearchResult }) {
       {/* Flight line */}
       <div className="flex-1 flex items-center gap-3 min-w-0">
         <div className="text-center shrink-0">
-          <div style={{ fontFamily: "var(--font-bebas)", fontSize: 20, letterSpacing: "0.05em", color: "var(--fg-2)" }}>{flight.origin}</div>
+          <div style={{ fontFamily: "var(--font-bebas)", fontSize: 18, letterSpacing: "0.05em", color: "var(--fg-2)" }}>{flight.origin}</div>
           <div className="text-xs" style={{ color: "var(--fg-3)" }}>{formatTime(flight.departureTime)}</div>
         </div>
         <div className="flex-1 flex flex-col items-center gap-1">
@@ -105,7 +128,7 @@ function ListRow({ flight }: { flight: SearchResult }) {
           <div style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.1em", color: "var(--fg-3)" }}>{stops}</div>
         </div>
         <div className="text-center shrink-0">
-          <div style={{ fontFamily: "var(--font-bebas)", fontSize: 20, letterSpacing: "0.05em", color: "var(--fg-2)" }}>{flight.destination}</div>
+          <div style={{ fontFamily: "var(--font-bebas)", fontSize: 18, letterSpacing: "0.05em", color: "var(--fg-2)" }}>{flight.destination}</div>
           <div className="text-xs" style={{ color: "var(--fg-3)" }}>{formatTime(flight.arrivalTime)}</div>
         </div>
       </div>
@@ -142,20 +165,15 @@ function GridCard({ flight }: { flight: SearchResult }) {
       className="rounded-xl p-5 flex flex-col transition-all hover:opacity-90"
       style={{ backgroundColor: "var(--bg-2)", border: "1px solid var(--border)", borderLeftWidth: 5, borderLeftColor: color, minHeight: 160 }}
     >
-      {/* IATA badge top-right */}
       <div className="flex items-start justify-between mb-2">
         <div />
-        <div style={{ fontFamily: "var(--font-bebas)", fontSize: 13, letterSpacing: "0.12em", backgroundColor: "var(--bg-4)", color: "var(--fg-2)", padding: "3px 8px", borderRadius: 5, border: "1px solid var(--border-2)" }}>
+        <div style={{ fontFamily: "var(--font-bebas)", fontSize: 13, letterSpacing: "0.12em", backgroundColor: "var(--bg-4)", color: "var(--fg-3)", padding: "3px 8px", borderRadius: 5, border: "1px solid var(--border-2)" }}>
           {flight.destination}
         </div>
       </div>
-
-      {/* City name */}
       <div style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 700, color: "var(--fg)", lineHeight: 1.15, flex: 1 }}>
         {flight.destinationCity}
       </div>
-
-      {/* Vibe + duration + time */}
       <div className="flex items-center justify-between mt-3">
         <div style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.15em", color, backgroundColor: `${color}18`, padding: "3px 9px", borderRadius: 20 }}>
           {vibeLabel(flight.destination).toUpperCase()}
@@ -167,8 +185,6 @@ function GridCard({ flight }: { flight: SearchResult }) {
           </div>
         </div>
       </div>
-
-      {/* Price + book */}
       <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
         <div>
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 20, fontWeight: 500, color: "var(--orange)", lineHeight: 1 }}>
@@ -190,22 +206,43 @@ function GridCard({ flight }: { flight: SearchResult }) {
   );
 }
 
+function RegionHeader({ region, count }: { region: string; count: number }) {
+  return (
+    <div
+      style={{
+        fontFamily: "var(--font-bebas)",
+        fontSize: 11,
+        letterSpacing: "0.3em",
+        color: "var(--beach)",
+        paddingBottom: 8,
+        marginBottom: 10,
+        borderBottom: "1px solid var(--border)",
+      }}
+    >
+      {region.toUpperCase()} &mdash; {count} {count === 1 ? "DESTINATION" : "DESTINATIONS"}
+    </div>
+  );
+}
+
 function ExploreContent() {
   const params = useSearchParams();
   const origin = params.get("origin") || "";
   const originName = params.get("originName") || origin;
 
-  const [flights, setFlights] = useState<SearchResult[]>([]);
+  const [rawResults, setRawResults] = useState<SearchResult[][]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [view, setView] = useState<View>("list");
+  const [date, setDate] = useState(() =>
+    new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0]
+  );
+  const [maxStops, setMaxStops] = useState<StopsFilter>("any");
 
   useEffect(() => {
     if (!origin) return;
     setLoading(true);
     setSearched(true);
     const destinations = POPULAR_DESTINATIONS.filter((d) => d !== origin).slice(0, 12);
-    const date = new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0];
 
     Promise.allSettled(
       destinations.map((dest) =>
@@ -216,28 +253,91 @@ function ExploreContent() {
         }).then((r) => r.json())
       )
     ).then((results) => {
-      const all: SearchResult[] = [];
+      const all: SearchResult[][] = [];
       results.forEach((r) => {
         if (r.status === "fulfilled" && r.value.results?.length) {
-          const cheapest: SearchResult = r.value.results.reduce(
-            (min: SearchResult, f: SearchResult) =>
-              parseFloat(f.price) < parseFloat(min.price) ? f : min,
-            r.value.results[0]
-          );
-          all.push(cheapest);
+          all.push(r.value.results);
         }
       });
-      all.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-      setFlights(all);
+      setRawResults(all);
       setLoading(false);
     });
-  }, [origin]);
+  }, [origin, date]);
+
+  const flights = useMemo(() => {
+    const all: SearchResult[] = [];
+    rawResults.forEach((results) => {
+      let candidates = results;
+      if (maxStops !== "any") {
+        const n = parseInt(maxStops);
+        candidates = candidates.filter((f) => f.stops === n);
+      }
+      if (!candidates.length) return;
+      all.push(
+        candidates.reduce(
+          (min, f) => parseFloat(f.price) < parseFloat(min.price) ? f : min,
+          candidates[0]
+        )
+      );
+    });
+    return all.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+  }, [rawResults, maxStops]);
+
+  const grouped = useMemo(() => {
+    return REGION_ORDER
+      .map((r) => ({ region: r, items: flights.filter((f) => getRegion(f.destination) === r) }))
+      .filter((g) => g.items.length > 0);
+  }, [flights]);
+
+  const stopsOptions: { value: StopsFilter; label: string }[] = [
+    { value: "any", label: "Any" },
+    { value: "0", label: "Nonstop" },
+    { value: "1", label: "1 Stop" },
+  ];
 
   return (
     <div className="max-w-6xl mx-auto px-5 py-10">
-      {/* Search */}
-      <div className="max-w-lg mb-10">
-        <OriginSearch initialValue={originName} />
+      {/* Search controls */}
+      <div className="mb-8">
+        <div className="flex flex-wrap gap-3 mb-4 max-w-2xl">
+          <div className="flex-1 min-w-52">
+            <OriginSearch initialValue={originName} />
+          </div>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="rounded-lg px-3 py-2.5 outline-none"
+            style={{
+              backgroundColor: "var(--bg-2)",
+              border: "1px solid var(--border)",
+              color: "var(--fg-2)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 13,
+            }}
+          />
+        </div>
+        <div className="flex gap-2">
+          {stopsOptions.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setMaxStops(value)}
+              style={{
+                fontFamily: "var(--font-bebas)",
+                letterSpacing: "0.12em",
+                fontSize: 12,
+                padding: "5px 14px",
+                borderRadius: 20,
+                backgroundColor: maxStops === value ? "var(--beach)" : "var(--bg-2)",
+                color: maxStops === value ? "var(--navy)" : "var(--fg-3)",
+                border: `1px solid ${maxStops === value ? "var(--beach)" : "var(--border)"}`,
+                transition: "all 0.15s",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {!searched && (
@@ -258,7 +358,6 @@ function ExploreContent() {
 
       {!loading && searched && flights.length > 0 && (
         <>
-          {/* Header */}
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div>
               <div style={{ fontFamily: "var(--font-bebas)", fontSize: 11, letterSpacing: "0.3em", color: "var(--beach)", marginBottom: 6 }}>
@@ -275,14 +374,28 @@ function ExploreContent() {
           </div>
 
           {view === "list" && (
-            <div className="flex flex-col gap-2">
-              {flights.map((f) => <ListRow key={f.id} flight={f} />)}
+            <div className="flex flex-col gap-8">
+              {grouped.map(({ region, items }) => (
+                <div key={region}>
+                  <RegionHeader region={region} count={items.length} />
+                  <div className="flex flex-col gap-2">
+                    {items.map((f) => <ListRow key={f.id} flight={f} />)}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
           {view === "grid" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {flights.map((f) => <GridCard key={f.id} flight={f} />)}
+            <div className="flex flex-col gap-8">
+              {grouped.map(({ region, items }) => (
+                <div key={region}>
+                  <RegionHeader region={region} count={items.length} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {items.map((f) => <GridCard key={f.id} flight={f} />)}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -296,8 +409,16 @@ function ExploreContent() {
 
       {!loading && searched && flights.length === 0 && (
         <div className="py-24 text-center">
-          <div style={{ fontFamily: "var(--font-serif)", fontSize: 24, color: "var(--fg-2)", marginBottom: 8 }}>No flights found from {origin}</div>
-          <p className="text-sm" style={{ color: "var(--fg-3)" }}>Try a different airport or come back closer to your travel date.</p>
+          <div style={{ fontFamily: "var(--font-serif)", fontSize: 24, color: "var(--fg-2)", marginBottom: 8 }}>
+            {rawResults.length === 0
+              ? `No flights found from ${origin}`
+              : maxStops === "0" ? "No nonstop flights found" : "No 1-stop flights found"}
+          </div>
+          <p className="text-sm" style={{ color: "var(--fg-3)" }}>
+            {rawResults.length === 0
+              ? "Try a different airport or come back closer to your travel date."
+              : "Try changing the stop filter or selecting a different date."}
+          </p>
         </div>
       )}
     </div>
