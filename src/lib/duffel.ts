@@ -71,6 +71,8 @@ export async function searchFlights(params: FlightSearchParams): Promise<SearchR
         origin: params.origin,
         destination: params.destination,
         departure_date: params.date,
+        departure_time: null,
+        arrival_time: null,
       },
     ],
     passengers: Array.from({ length: params.passengers || 1 }, () => ({
