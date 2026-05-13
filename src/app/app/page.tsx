@@ -28,8 +28,8 @@ const VIBE: Record<string, string> = {
   STL:"heartland",XNA:"heartland",MEM:"heartland",
 };
 const VIBE_COLORS: Record<string, string> = {
-  beach: "var(--beach)", mountain: "var(--mountain)", city: "var(--city)",
-  desert: "var(--desert)", heartland: "var(--heartland)",
+  beach: "var(--vibe-beach)", mountain: "var(--vibe-mountain)", city: "var(--vibe-city)",
+  desert: "var(--vibe-desert)", heartland: "var(--vibe-heartland)",
 };
 function vibeLabel(iata: string) { return VIBE[iata] ?? "city"; }
 function accentColor(iata: string) { return VIBE_COLORS[VIBE[iata]] ?? "var(--beach)"; }
@@ -105,31 +105,31 @@ function ListRow({ flight }: { flight: SearchResult }) {
         <div style={{ fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 700, color: "var(--fg)", lineHeight: 1.2 }}>
           {flight.destinationCity}
         </div>
-        <div style={{ fontFamily: "var(--font-bebas)", fontSize: 11, letterSpacing: "0.15em", color: "var(--fg-3)", marginTop: 2 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--fg-3)", marginTop: 2 }}>
           {flight.destination}
         </div>
-        <div style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.15em", color, marginTop: 2 }}>
-          {vibeLabel(flight.destination).toUpperCase()}
+        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", color, marginTop: 2 }}>
+          {vibeLabel(flight.destination)}
         </div>
       </div>
 
       {/* Flight line */}
       <div className="flex-1 flex items-center gap-3 min-w-0">
         <div className="text-center shrink-0">
-          <div style={{ fontFamily: "var(--font-bebas)", fontSize: 18, letterSpacing: "0.05em", color: "var(--fg-2)" }}>{flight.origin}</div>
-          <div className="text-xs" style={{ color: "var(--fg-3)" }}>{formatTime(flight.departureTime)}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.04em", color: "var(--fg-2)" }}>{flight.origin}</div>
+          <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{formatTime(flight.departureTime)}</div>
         </div>
         <div className="flex-1 flex flex-col items-center gap-1">
-          <div className="text-xs" style={{ color: "var(--fg-3)" }}>{formatDuration(flight.duration)}</div>
+          <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{formatDuration(flight.duration)}</div>
           <div className="w-full flex items-center gap-1">
             <div className="flex-1 h-px" style={{ backgroundColor: "var(--border-2)" }} />
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
           </div>
-          <div style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.1em", color: "var(--fg-3)" }}>{stops}</div>
+          <div style={{ fontSize: 11, color: "var(--fg-3)" }}>{stops}</div>
         </div>
         <div className="text-center shrink-0">
-          <div style={{ fontFamily: "var(--font-bebas)", fontSize: 18, letterSpacing: "0.05em", color: "var(--fg-2)" }}>{flight.destination}</div>
-          <div className="text-xs" style={{ color: "var(--fg-3)" }}>{formatTime(flight.arrivalTime)}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.04em", color: "var(--fg-2)" }}>{flight.destination}</div>
+          <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{formatTime(flight.arrivalTime)}</div>
         </div>
       </div>
 
@@ -167,20 +167,20 @@ function GridCard({ flight }: { flight: SearchResult }) {
     >
       <div className="flex items-start justify-between mb-2">
         <div />
-        <div style={{ fontFamily: "var(--font-bebas)", fontSize: 13, letterSpacing: "0.12em", backgroundColor: "var(--bg-4)", color: "var(--fg-3)", padding: "3px 8px", borderRadius: 5, border: "1px solid var(--border-2)" }}>
+        <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", backgroundColor: "var(--bg-4)", color: "var(--fg-3)", padding: "3px 8px", borderRadius: 5, border: "1px solid var(--border-2)" }}>
           {flight.destination}
         </div>
       </div>
-      <div style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 700, color: "var(--fg)", lineHeight: 1.15, flex: 1 }}>
+      <div style={{ fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 700, color: "var(--fg)", lineHeight: 1.15, flex: 1 }}>
         {flight.destinationCity}
       </div>
       <div className="flex items-center justify-between mt-3">
-        <div style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.15em", color, backgroundColor: `${color}18`, padding: "3px 9px", borderRadius: 20 }}>
-          {vibeLabel(flight.destination).toUpperCase()}
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", color, backgroundColor: `${color}18`, padding: "3px 9px", borderRadius: 20 }}>
+          {vibeLabel(flight.destination)}
         </div>
         <div className="text-right">
-          <div className="text-xs" style={{ color: "var(--fg-3)" }}>{formatDuration(flight.duration)}</div>
-          <div className="text-xs mt-0.5" style={{ color: "var(--fg-2)", fontFamily: "var(--font-bebas)" }}>
+          <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{formatDuration(flight.duration)}</div>
+          <div style={{ fontSize: 12, color: "var(--fg-2)", marginTop: 2 }}>
             {formatTime(flight.departureTime)} → {formatTime(flight.arrivalTime)}
           </div>
         </div>

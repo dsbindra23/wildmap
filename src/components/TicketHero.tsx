@@ -5,6 +5,25 @@ import { useRouter } from "next/navigation";
 
 interface Place { iataCode: string; city: string; name: string; }
 
+// Boarding-pass barcode — decorative SVG, ~50 bars
+function Barcode() {
+  // pairs: [x, width] for each bar (computed from a realistic EAN-style pattern)
+  const bars: [number, number][] = [
+    [0,3],[4,1],[7,2],[10,1],[12,1],[15,2],[18,1],[21,1],[23,3],[27,1],
+    [30,2],[33,1],[35,1],[38,2],[41,1],[44,1],[46,3],[50,1],[53,2],[56,1],
+    [58,1],[61,1],[63,2],[66,3],[70,1],[73,1],[75,2],[78,1],[81,3],[85,1],
+    [87,2],[90,1],[93,1],[95,2],[98,3],[102,1],[105,2],[108,1],[110,3],[114,1],
+    [117,2],[120,1],[123,1],[125,2],[128,1],[131,1],[133,2],[136,1],[139,3],[143,2],
+  ];
+  return (
+    <svg viewBox="0 0 146 34" style={{ width: "100%", height: 34, display: "block" }} aria-hidden="true">
+      {bars.map(([x, w]) => (
+        <rect key={x} x={x} y={0} width={w} height={34} fill="var(--fg)" opacity={0.65} />
+      ))}
+    </svg>
+  );
+}
+
 export default function TicketHero() {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -52,6 +71,8 @@ export default function TicketHero() {
 
   const SPRING = "0.5s cubic-bezier(0.34, 1.56, 0.64, 1)";
   const DASH = "1px dashed var(--border-2)";
+  const LABEL: React.CSSProperties = { fontSize: 9, letterSpacing: "0.18em", color: "var(--fg-3)", marginBottom: 3, textTransform: "uppercase" };
+  const VALUE: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: "var(--fg)", letterSpacing: "0.04em" };
 
   return (
     <div ref={containerRef} style={{ width: "100%", maxWidth: 720, margin: "0 auto" }}>
@@ -70,24 +91,14 @@ export default function TicketHero() {
           display: block;
         }
         .wm-ticket-input::placeholder { color: var(--fg-3); font-size: 20px; font-weight: 700; }
-        .wm-hover-hint { display: block; }
         @media (max-width: 640px) {
           .wm-ticket-input { font-size: 22px !important; }
           .wm-ticket-input::placeholder { font-size: 15px; }
-          .wm-hover-hint { display: none; }
           .wm-ticket-wrapper { height: 360px !important; }
           .wm-ticket-front { height: 300px !important; }
-          .wm-ticket-explore { padding: 10px 16px !important; }
+          .wm-ticket-explore { padding: 10px 16px !important; font-size: 12px !important; }
         }
       `}</style>
-
-      {/* Hover hint */}
-      <div className="wm-hover-hint" style={{
-        textAlign: "center", marginBottom: 20,
-        fontFamily: "var(--font-bebas)", fontSize: 11, letterSpacing: "0.2em", color: "var(--fg-3)",
-      }}>
-        ✦ HOVER THE TICKETS TO REVEAL THE STACK ✦
-      </div>
 
       {/* Ticket stack */}
       <div
@@ -100,9 +111,7 @@ export default function TicketHero() {
         <div style={{
           position: "absolute", top: 0, left: 0, right: 0, height: 80,
           zIndex: 1, opacity: 0.5,
-          backgroundColor: "var(--bg-4)",
-          border: "1.5px solid var(--border-2)",
-          borderRadius: 10,
+          backgroundColor: "var(--bg-4)", border: "1.5px solid var(--border-2)", borderRadius: 10,
           transform: hovered ? "rotate(-8deg) translate(-40px, -14px)" : "rotate(-3deg)",
           transition: SPRING,
         }} />
@@ -110,48 +119,46 @@ export default function TicketHero() {
         <div style={{
           position: "absolute", top: 20, left: 0, right: 0, height: 90,
           zIndex: 2, opacity: 0.75,
-          backgroundColor: "var(--bg-3)",
-          border: "1.5px solid var(--border-2)",
-          borderRadius: 10,
+          backgroundColor: "var(--bg-3)", border: "1.5px solid var(--border-2)", borderRadius: 10,
           transform: hovered ? "rotate(6deg) translate(28px, -14px)" : "rotate(2deg)",
           transition: SPRING,
         }} />
+
         {/* Front ticket */}
         <div
           className="wm-ticket-front"
           style={{
             position: "absolute", top: 50, left: 0, right: 0, height: 260,
             zIndex: 3,
-            backgroundColor: "var(--bg-2)",
-            border: "1.5px solid var(--border-2)",
-            borderRadius: 10,
-            boxShadow: "0 16px 40px rgba(15,31,46,0.12)",
+            backgroundColor: "var(--bg-2)", border: "1.5px solid var(--border-2)",
+            borderRadius: 10, boxShadow: "0 16px 40px rgba(15,31,46,0.12)",
           }}
         >
-          {/* Top strip */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "13px 22px", borderBottom: DASH,
-          }}>
-            <span style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.2em", color: "var(--fg-3)" }}>
-              GO WILD · UNLIMITED PASS
-            </span>
-            <span style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.2em", color: "var(--fg)" }}>
-              TICKET 001 / ∞
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#be123c", display: "inline-block" }} />
-              <span style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.2em", color: "var(--fg-3)" }}>VALID</span>
-            </span>
+          {/* ── Top strip: boarding-pass header ── */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 22px", borderBottom: DASH }}>
+            <div>
+              <div style={LABEL}>Passenger</div>
+              <div style={VALUE}>GoWild Pass</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={LABEL}>Flight</div>
+              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 18, letterSpacing: "0.12em", color: "var(--fg)" }}>F9 WM∞</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={LABEL}>Status</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, justifyContent: "flex-end" }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: "#22c55e", display: "inline-block", boxShadow: "0 0 6px #22c55e" }} />
+                <span style={{ ...VALUE, color: "#22c55e" }}>Boarding</span>
+              </div>
+            </div>
           </div>
 
-          {/* Main section */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "22px 26px" }}>
-            {/* Search icon circle */}
+          {/* ── Main section: search ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "20px 26px" }}>
             <div
               onClick={() => inputRef.current?.focus()}
               style={{
-                width: 46, height: 46, borderRadius: "50%",
+                width: 44, height: 44, borderRadius: "50%",
                 backgroundColor: "var(--fg)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0, cursor: "pointer",
@@ -161,12 +168,8 @@ export default function TicketHero() {
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
               </svg>
             </div>
-
-            {/* Input */}
             <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
-              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 10, letterSpacing: "0.2em", color: "var(--fg-3)", marginBottom: 3 }}>
-                DEPARTING FROM
-              </div>
+              <div style={{ ...LABEL, marginBottom: 3 }}>Departing from</div>
               <input
                 ref={inputRef}
                 className="wm-ticket-input"
@@ -178,38 +181,29 @@ export default function TicketHero() {
               />
               {open && results.length > 0 && (
                 <div style={{
-                  position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0,
-                  zIndex: 9999,
-                  backgroundColor: "var(--bg-2)",
-                  borderRadius: 10, overflow: "hidden",
-                  boxShadow: "0 8px 32px rgba(15,31,46,0.15)",
-                  border: "1px solid var(--border-2)",
+                  position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 9999,
+                  backgroundColor: "var(--bg-2)", borderRadius: 10, overflow: "hidden",
+                  boxShadow: "0 8px 32px rgba(15,31,46,0.15)", border: "1px solid var(--border-2)",
                 }}>
                   {results.map((r) => (
                     <button
                       key={r.iataCode} type="button" onClick={() => pick(r)}
                       className="border-b last:border-0"
-                      style={{
-                        display: "flex", alignItems: "center", gap: 12,
-                        padding: "11px 16px", width: "100%",
-                        borderColor: "var(--border)", background: "none", cursor: "pointer",
-                      }}
+                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", width: "100%", borderColor: "var(--border)", background: "none", cursor: "pointer" }}
                     >
-                      <span style={{ fontFamily: "var(--font-bebas)", letterSpacing: "0.1em", fontSize: 15, color: "var(--beach)", width: 38, flexShrink: 0 }}>{r.iataCode}</span>
+                      <span style={{ fontWeight: 700, fontSize: 14, color: "var(--fg)", width: 38, flexShrink: 0, letterSpacing: "0.04em" }}>{r.iataCode}</span>
                       <span style={{ fontSize: 14, color: "var(--fg-2)" }}>{r.city}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
-
-            {/* Explore button */}
             <button
               className="wm-ticket-explore"
               onClick={handleSubmit}
               style={{
                 fontFamily: "var(--font-bebas)", letterSpacing: "0.15em", fontSize: 14,
-                padding: "14px 22px", borderRadius: 8,
+                padding: "13px 22px", borderRadius: 8,
                 backgroundColor: "var(--fg)", color: "var(--bg)",
                 border: "none", cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
                 transition: "opacity 0.2s",
@@ -221,30 +215,18 @@ export default function TicketHero() {
             </button>
           </div>
 
-          {/* Bottom stats */}
-          <div style={{ borderTop: DASH, padding: "15px 26px 18px", display: "flex", justifyContent: "space-around", alignItems: "center" }}>
-            {[
-              { value: "95+", label: "Destinations" },
-              { value: "$0.01", label: "Per Flight" },
-              { value: "∞", label: "Adventures" },
-            ].map((stat, i, arr) => (
-              <div key={stat.label} style={{ display: "flex", alignItems: "center" }}>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: "var(--font-bebas)", fontSize: 24, color: "var(--fg)", lineHeight: 1 }}>{stat.value}</div>
-                  <div style={{ fontSize: 9, letterSpacing: "0.15em", color: "var(--fg-3)", textTransform: "uppercase", marginTop: 2 }}>{stat.label}</div>
-                </div>
-                {i < arr.length - 1 && (
-                  <div style={{ width: 1, height: 28, backgroundColor: "var(--border-2)", margin: "0 20px" }} />
-                )}
-              </div>
-            ))}
+          {/* ── Bottom: barcode ── */}
+          <div style={{ borderTop: DASH, padding: "14px 22px 16px" }}>
+            <Barcode />
+            <div style={{
+              textAlign: "center", marginTop: 7,
+              fontSize: 10, letterSpacing: "0.25em", color: "var(--fg-3)",
+              fontVariantNumeric: "tabular-nums",
+            }}>
+              9 780099 455678
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Below stack */}
-      <div style={{ textAlign: "center", marginTop: 28, fontFamily: "var(--font-bebas)", fontSize: 11, letterSpacing: "0.2em", color: "var(--fg-3)" }}>
-        UNLIMITED FLIGHTS · ONE TICKET · ALL YEAR
       </div>
     </div>
   );
