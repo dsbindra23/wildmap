@@ -125,7 +125,12 @@ function ListRow({ flight }: { flight: SearchResult }) {
             <div className="flex-1 h-px" style={{ backgroundColor: "var(--border-2)" }} />
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
           </div>
-          <div style={{ fontSize: 11, color: "var(--fg-3)" }}>{stops}</div>
+          <div style={{ fontSize: 11, color: "var(--fg-3)" }}>
+            {stops}
+            {flight.airlineCode && (
+              <span style={{ marginLeft: 6, opacity: 0.6 }}>· {flight.airlineCode}</span>
+            )}
+          </div>
         </div>
         <div className="text-center shrink-0">
           <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.04em", color: "var(--fg-2)" }}>{flight.destination}</div>
@@ -183,6 +188,11 @@ function GridCard({ flight }: { flight: SearchResult }) {
           <div style={{ fontSize: 12, color: "var(--fg-2)", marginTop: 2 }}>
             {formatTime(flight.departureTime)} → {formatTime(flight.arrivalTime)}
           </div>
+          {flight.airlineCode && (
+            <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 2, opacity: 0.7 }}>
+              {flight.airlineCode}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
