@@ -102,13 +102,13 @@ function ListRow({ flight }: { flight: SearchResult }) {
     >
       {/* City name — most prominent */}
       <div style={{ minWidth: 160 }}>
-        <div style={{ fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 700, color: "var(--fg)", lineHeight: 1.2 }}>
+        <div style={{ fontFamily: "var(--font-serif)", fontSize: 23, fontWeight: 700, color: "var(--fg)", lineHeight: 1.2 }}>
           {flight.destinationCity}
         </div>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--fg-3)", marginTop: 2 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", color: "var(--fg-3)", marginTop: 2 }}>
           {flight.destination}
         </div>
-        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", color, marginTop: 2 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", color, marginTop: 2 }}>
           {vibeLabel(flight.destination)}
         </div>
       </div>
@@ -171,7 +171,7 @@ function GridCard({ flight }: { flight: SearchResult }) {
           {flight.destination}
         </div>
       </div>
-      <div style={{ fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 700, color: "var(--fg)", lineHeight: 1.15, flex: 1 }}>
+      <div style={{ fontFamily: "var(--font-serif)", fontSize: 23, fontWeight: 700, color: "var(--fg)", lineHeight: 1.15, flex: 1 }}>
         {flight.destinationCity}
       </div>
       <div className="flex items-center justify-between mt-3">

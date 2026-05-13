@@ -138,11 +138,11 @@ export default function TicketHero() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 22px", borderBottom: DASH }}>
             <div>
               <div style={LABEL}>Passenger</div>
-              <div style={VALUE}>GoWild Pass</div>
+              <div style={VALUE}>Mr. GoWild</div>
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={LABEL}>Flight</div>
-              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 18, letterSpacing: "0.12em", color: "var(--fg)" }}>F9 WM∞</div>
+              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 18, letterSpacing: "0.12em", color: "var(--fg)" }}>W1 DSB</div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={LABEL}>Status</div>
@@ -150,6 +150,17 @@ export default function TicketHero() {
                 <span style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: "#22c55e", display: "inline-block", boxShadow: "0 0 6px #22c55e" }} />
                 <span style={{ ...VALUE, color: "#22c55e" }}>Boarding</span>
               </div>
+            </div>
+          </div>
+          {/* ── Seat / Gate strip ── */}
+          <div style={{ display: "flex", gap: 28, padding: "8px 22px", borderBottom: DASH }}>
+            <div>
+              <div style={LABEL}>Seat</div>
+              <div style={{ ...VALUE, fontSize: 15 }}>11A</div>
+            </div>
+            <div>
+              <div style={LABEL}>Gate</div>
+              <div style={{ ...VALUE, fontSize: 15 }}>D23</div>
             </div>
           </div>
 
@@ -223,7 +234,7 @@ export default function TicketHero() {
               fontSize: 10, letterSpacing: "0.25em", color: "var(--fg-3)",
               fontVariantNumeric: "tabular-nums",
             }}>
-              9 780099 455678
+              1 0613232398
             </div>
           </div>
         </div>
