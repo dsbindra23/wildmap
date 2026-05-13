@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, Polyline, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Loader2 } from "lucide-react";
 import type { SearchResult } from "@/lib/duffel";
 import { formatPrice } from "@/lib/utils";
 
+// ─── Airport coordinates ───────────────────────────────────────────────
 const AIRPORT_COORDS: Record<string, [number, number]> = {
   JFK: [40.6413, -73.7781], LGA: [40.7769, -73.874], EWR: [40.6895, -74.1745],
   BOS: [42.3656, -71.0096], BUF: [42.9405, -78.7322], BDL: [41.9389, -72.6832],
@@ -41,282 +42,365 @@ const AIRPORT_COORDS: Record<string, [number, number]> = {
   GUA: [14.5833, -90.5275], SAL: [13.4409, -89.0557],
 };
 
-interface Props {
-  preloadedFlights?: SearchResult[];
-  origin?: string;
+// ─── Bezier helpers ────────────────────────────────────────────────────
+function haversineKm(p1: [number, number], p2: [number, number]): number {
+  const R = 6371, r = Math.PI / 180;
+  const dLat = (p2[0] - p1[0]) * r, dLon = (p2[1] - p1[1]) * r;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(p1[0] * r) * Math.cos(p2[0] * r) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
 }
 
+// Quadratic bezier control point — arcs northward for great-circle feel
+function bezierCtrl(p0: [number, number], p1: [number, number]): [number, number] {
+  const km = haversineKm(p0, p1);
+  const lift = km < 400 ? 1.5 : Math.min(11, km / 450);
+  return [(p0[0] + p1[0]) / 2 + lift, (p0[1] + p1[1]) / 2];
+}
+
+function bezierAt(p0: [number, number], c: [number, number], p1: [number, number], t: number): [number, number] {
+  const m = 1 - t;
+  return [m * m * p0[0] + 2 * m * t * c[0] + t * t * p1[0], m * m * p0[1] + 2 * m * t * c[1] + t * t * p1[1]];
+}
+
+function bezierPts(p0: [number, number], c: [number, number], p1: [number, number], n = 80): [number, number][] {
+  return Array.from({ length: n }, (_, i) => bezierAt(p0, c, p1, i / (n - 1)));
+}
+
+// Ease in-out for cinematic flight feel
+function easeIO(t: number): number {
+  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+}
+
+// Parse ISO 8601 duration → seconds
+function parseIsoDur(s: string): number {
+  const m = s?.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 3600;
+  return (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + (+(m[3] || 0));
+}
+
+function fmtSimTime(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = Math.floor(secs % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}`;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+// ─── Constants ─────────────────────────────────────────────────────────
+const BASE_DURATION_SEC = 30; // wall-clock seconds at 1× speed for full arc
+const SPEEDS = [1, 8, 16, 64, 128] as const;
+type Speed = (typeof SPEEDS)[number];
+
+interface Props { preloadedFlights?: SearchResult[]; origin?: string; }
 interface AirportSuggestion { iataCode: string; city: string; name: string; }
 
-// Slerp great-circle interpolation
-function greatCirclePoints(
-  [lat1d, lon1d]: [number, number],
-  [lat2d, lon2d]: [number, number],
-  n = 100
-): [number, number][] {
-  const R = Math.PI / 180;
-  const lat1 = lat1d * R, lon1 = lon1d * R;
-  const lat2 = lat2d * R, lon2 = lon2d * R;
-  const d = 2 * Math.asin(Math.sqrt(
-    Math.sin((lat2 - lat1) / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2
-  ));
-  if (d < 0.001) return Array(n).fill([lat1d, lon1d] as [number, number]);
-  return Array.from({ length: n }, (_, i) => {
-    const t = i / (n - 1);
-    const A = Math.sin((1 - t) * d) / Math.sin(d);
-    const B = Math.sin(t * d) / Math.sin(d);
-    const x = A * Math.cos(lat1) * Math.cos(lon1) + B * Math.cos(lat2) * Math.cos(lon2);
-    const y = A * Math.cos(lat1) * Math.sin(lon1) + B * Math.cos(lat2) * Math.sin(lon2);
-    const z = A * Math.sin(lat1) + B * Math.sin(lat2);
-    return [
-      Math.atan2(z, Math.sqrt(x ** 2 + y ** 2)) / R,
-      Math.atan2(y, x) / R,
-    ] as [number, number];
-  });
-}
-
+// ─── MapFit ────────────────────────────────────────────────────────────
 function MapFit({ coords }: { coords: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
-    if (coords.length > 1) map.fitBounds(coords, { padding: [60, 60], maxZoom: 7 });
+    if (coords.length > 1) map.fitBounds(coords as L.LatLngBoundsExpression, { padding: [60, 60], maxZoom: 7 });
   }, [coords, map]);
   return null;
 }
 
-let planeCounter = 0;
-
-function RouteLayer({
-  flight,
-  originCoord,
-  mapTheme,
+// ─── RouteArc ──────────────────────────────────────────────────────────
+// Renders one flight's curved arc + destination dot, handles click-to-select.
+// All Leaflet layers are created imperatively for direct SVG path access.
+function RouteArc({
+  flight, originCoord, selectedId, onSelect, mapTheme,
 }: {
   flight: SearchResult;
   originCoord: [number, number];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
   mapTheme: "night" | "day";
 }) {
   const map = useMap();
-  const destCoord = AIRPORT_COORDS[flight.destination];
-  const [hovered, setHovered] = useState(false);
-
-  const animRef = useRef<number | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
-  const glowHaloRef = useRef<L.Polyline | null>(null);
-  const glowCoreRef = useRef<L.Polyline | null>(null);
-  const planeElRef = useRef<HTMLElement | null>(null);
-  const planeId = useRef(`wm-plane-${++planeCounter}`);
-  const tRef = useRef(0);
-  const lastTimeRef = useRef<number | null>(null);
-  const pixelLengthRef = useRef(0);
-  const isAnimating = useRef(false);
-  const isPausing = useRef(false);
-  const stopDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const restartTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const onZoomRef = useRef<(() => void) | null>(null);
-
-  const path = destCoord ? greatCirclePoints(originCoord, destCoord, 100) : ([] as [number, number][]);
+  const dest = AIRPORT_COORDS[flight.destination];
+  const arcRef = useRef<L.Polyline | null>(null);
+  const hitRef = useRef<L.Polyline | null>(null);
+  const dotRef = useRef<L.CircleMarker | null>(null);
 
   const teal = mapTheme === "day" ? "#0d9488" : "#00d4b4";
-  const dimRoute = mapTheme === "day" ? "rgba(0,0,0,0.10)" : "rgba(255,255,255,0.09)";
-  const hovRoute = mapTheme === "day" ? "rgba(13,148,136,0.20)" : "rgba(0,212,180,0.15)";
+  const bgFill = mapTheme === "day" ? "#f8f6f0" : "#0d1b2e";
 
-  const computePixelLength = () => {
-    if (path.length < 2) return 1;
-    let len = 0;
-    for (let i = 0; i < path.length - 1; i++) {
-      const a = map.latLngToContainerPoint(path[i]);
-      const b = map.latLngToContainerPoint(path[i + 1]);
-      len += Math.hypot(b.x - a.x, b.y - a.y);
+  // Mount layers once per flight/theme
+  useEffect(() => {
+    if (!dest) return;
+    const ctrl = bezierCtrl(originCoord, dest);
+    const pts = bezierPts(originCoord, ctrl, dest);
+
+    // Visible arc — dashed, at rest
+    const arc = L.polyline(pts as L.LatLngExpression[], {
+      color: teal, weight: 1.5, opacity: 0.35, dashArray: "4 6", interactive: false,
+    }).addTo(map);
+    arcRef.current = arc;
+
+    // Apply smooth CSS transitions and slow dashoffset animation after render
+    requestAnimationFrame(() => {
+      const svgPath = (arc as any)._path as SVGPathElement | undefined;
+      if (svgPath) {
+        svgPath.style.transition = "opacity 350ms ease-out, stroke-width 300ms ease-out";
+        svgPath.style.animation = "wm-dash 40s linear infinite";
+      }
+    });
+
+    // Wide invisible hit area for easy clicking
+    const hit = L.polyline(pts as L.LatLngExpression[], { color: "#fff", weight: 22, opacity: 0.001 }).addTo(map);
+    hitRef.current = hit;
+    hit.on("click", () => onSelect(flight.id));
+    hit.on("mouseover", () => {
+      const p = (arcRef.current as any)?._path as SVGPathElement | undefined;
+      if (p) p.style.opacity = "0.7";
+      dotRef.current?.setRadius(8);
+    });
+    hit.on("mouseout", () => {
+      // Opacity restored by the selection-state effect
+      const isSelected = arcRef.current && (arcRef.current as any).__wmSelected;
+      const isFaded = arcRef.current && (arcRef.current as any).__wmFaded;
+      const p = (arcRef.current as any)?._path as SVGPathElement | undefined;
+      if (p) p.style.opacity = isSelected ? "1" : isFaded ? "0.12" : "0.35";
+      dotRef.current?.setRadius(isSelected ? 6 : 5);
+    });
+
+    // Destination dot
+    const dot = L.circleMarker(dest as L.LatLngExpression, {
+      radius: 5, color: teal, weight: 1.5, fillColor: bgFill, fillOpacity: 0.9, opacity: 0.4,
+    }).addTo(map);
+    dotRef.current = dot;
+    dot.on("click", () => onSelect(flight.id));
+    dot.on("mouseover", () => dot.setRadius(8));
+    dot.on("mouseout", () => dot.setRadius((dot as any).__wmSelected ? 6 : 5));
+
+    // Popup on dot
+    const bookUrl = `https://www.flyfrontier.com/flights/search?origin=${flight.origin}&destination=${flight.destination}&departDate=${flight.departureTime.split("T")[0]}&adults=1`;
+    dot.bindPopup(
+      `<div style="font-family:sans-serif;font-size:13px;min-width:148px;background:#0d1b2e;color:#e8f0f8;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1)">` +
+      `<div style="font-size:15px;margin-bottom:2px">${flight.origin} → ${flight.destination}</div>` +
+      `<div style="font-size:22px;color:#ff7a1a;margin-bottom:4px">${formatPrice(flight.price, flight.currency)}</div>` +
+      `<div style="font-size:11px;color:#8ba0b8;margin-bottom:8px">${(flight.destinationCity || "").toUpperCase()}</div>` +
+      `<a href="${bookUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#e8f0f8;color:#060d1a;font-size:11px;padding:5px 13px;border-radius:6px;text-decoration:none;font-weight:700">BOOK ON FRONTIER →</a></div>`,
+      { className: "wm-popup" }
+    );
+
+    return () => {
+      map.removeLayer(arc);
+      map.removeLayer(hit);
+      map.removeLayer(dot);
+    };
+  }, [flight.id, mapTheme]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // React to selection state changes
+  useEffect(() => {
+    const isSelected = selectedId === flight.id;
+    const isFaded = selectedId !== null && !isSelected;
+
+    // Store state on layer object for the hover handlers
+    if (arcRef.current) {
+      (arcRef.current as any).__wmSelected = isSelected;
+      (arcRef.current as any).__wmFaded = isFaded;
     }
-    return Math.max(len, 1);
-  };
+    if (dotRef.current) (dotRef.current as any).__wmSelected = isSelected;
 
-  const doStop = () => {
-    if (restartTimerRef.current) { clearTimeout(restartTimerRef.current); restartTimerRef.current = null; }
-    isAnimating.current = false;
-    isPausing.current = false;
-    if (animRef.current !== null) { cancelAnimationFrame(animRef.current); animRef.current = null; }
-    if (onZoomRef.current) { map.off("zoom", onZoomRef.current); onZoomRef.current = null; }
-    if (markerRef.current) { map.removeLayer(markerRef.current); markerRef.current = null; }
-    if (glowHaloRef.current) { map.removeLayer(glowHaloRef.current); glowHaloRef.current = null; }
-    if (glowCoreRef.current) { map.removeLayer(glowCoreRef.current); glowCoreRef.current = null; }
-    planeElRef.current = null;
-    tRef.current = 0;
-    lastTimeRef.current = null;
-  };
+    const svgPath = (arcRef.current as any)?._path as SVGPathElement | undefined;
+    if (svgPath) {
+      if (isSelected) {
+        svgPath.style.opacity = "1";
+        svgPath.style.strokeWidth = "2px";
+        svgPath.style.strokeDasharray = "none";
+        svgPath.style.animation = "none";
+      } else if (isFaded) {
+        svgPath.style.opacity = "0.12";
+        svgPath.style.strokeWidth = "1.5px";
+        svgPath.style.strokeDasharray = "4 6";
+        svgPath.style.animation = "wm-dash 40s linear infinite";
+      } else {
+        svgPath.style.opacity = "0.35";
+        svgPath.style.strokeWidth = "1.5px";
+        svgPath.style.strokeDasharray = "4 6";
+        svgPath.style.animation = "wm-dash 40s linear infinite";
+      }
+    }
 
-  const stopAnim = () => {
-    if (stopDebounceRef.current) clearTimeout(stopDebounceRef.current);
-    stopDebounceRef.current = setTimeout(doStop, 80);
-  };
+    const dotPath = (dotRef.current as any)?._path as SVGPathElement | undefined;
+    if (dotPath) {
+      dotPath.style.transition = "opacity 350ms ease-out";
+      dotPath.style.opacity = isSelected ? "1" : isFaded ? "0.12" : "0.4";
+    }
+    if (isSelected) {
+      dotRef.current?.setStyle({ fillColor: teal });
+      dotRef.current?.setRadius(6);
+    } else {
+      dotRef.current?.setStyle({ fillColor: bgFill });
+      dotRef.current?.setRadius(5);
+    }
+  }, [selectedId, flight.id, teal, bgFill]);
 
-  const startAnim = () => {
-    if (stopDebounceRef.current) { clearTimeout(stopDebounceRef.current); stopDebounceRef.current = null; }
-    if (isAnimating.current || isPausing.current || !destCoord || path.length === 0) return;
-    isAnimating.current = true;
-    lastTimeRef.current = null;
-    pixelLengthRef.current = computePixelLength();
+  return null;
+}
 
-    const onZoom = () => { pixelLengthRef.current = computePixelLength(); };
-    onZoomRef.current = onZoom;
-    map.on("zoom", onZoom);
+// ─── PlaybackLayer ─────────────────────────────────────────────────────
+// Lives inside MapContainer. Manages the animated plane + trail polylines.
+function PlaybackLayer({
+  flight, originCoord, isPlaying, speed, mapTheme, progressRef, timerElRef, onComplete,
+}: {
+  flight: SearchResult;
+  originCoord: [number, number];
+  isPlaying: boolean;
+  speed: Speed;
+  mapTheme: "night" | "day";
+  progressRef: { current: number };
+  timerElRef: React.RefObject<HTMLSpanElement | null>;
+  onComplete: () => void;
+}) {
+  const map = useMap();
+  const dest = AIRPORT_COORDS[flight.destination];
+  const ctrl = dest ? bezierCtrl(originCoord, dest) : null;
 
-    glowHaloRef.current = L.polyline([], { color: teal, weight: 14, opacity: 0.07 }).addTo(map);
-    glowCoreRef.current = L.polyline([], { color: teal, weight: 2.5, opacity: 0.85 }).addTo(map);
+  const ptsRef = useRef<[number, number][]>([]);
+  const planeMarkerRef = useRef<L.Marker | null>(null);
+  const planeElRef = useRef<HTMLElement | null>(null);
+  const trailRef = useRef<L.Polyline | null>(null);
+  const trailGlowRef = useRef<L.Polyline | null>(null);
+  const animRef = useRef<number | null>(null);
+  const lastTsRef = useRef<number | null>(null);
+  const speedRef = useRef(speed);
+  const isPlayingRef = useRef(isPlaying);
+  const completedRef = useRef(false);
+  const flightDurSec = parseIsoDur(flight.duration);
 
-    const id = planeId.current;
-    // SVG plane pointing RIGHT (East) at 0° rotation — cssRotation = screenAngle directly
-    const planeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -9 24 18" width="28" height="22" style="display:block">
-      <path d="M9,0 L-4,-2 L-9,-1.5 L-10.5,0 L-9,1.5 L-4,2 Z" fill="${teal}"/>
-      <path d="M0.5,-1.5 L-4.5,-9 L-6.5,-6 L-1.5,0 Z" fill="${teal}"/>
-      <path d="M0.5,1.5 L-4.5,9 L-6.5,6 L-1.5,0 Z" fill="${teal}"/>
-      <path d="M-8,-1.5 L-11.5,-5 L-10,-1.5 Z" fill="${teal}" opacity="0.8"/>
-      <path d="M-8,1.5 L-11.5,5 L-10,1.5 Z" fill="${teal}" opacity="0.8"/>
-    </svg>`;
-    markerRef.current = L.marker(originCoord, {
+  const teal = mapTheme === "day" ? "#0d9488" : "#00d4b4";
+  const planeFill = mapTheme === "day" ? "#0f1f2e" : "#00d4b4";
+
+  useEffect(() => { speedRef.current = speed; }, [speed]);
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+
+  // Mount plane marker + trail polylines once per selected flight
+  useEffect(() => {
+    if (!dest || !ctrl) return;
+    ptsRef.current = bezierPts(originCoord, ctrl, dest, 80);
+    completedRef.current = false;
+
+    const planeSvg =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -9 24 18" width="28" height="22" style="display:block">` +
+      `<path d="M9,0 L-4,-2 L-9,-1.5 L-10.5,0 L-9,1.5 L-4,2 Z" fill="${planeFill}"/>` +
+      `<path d="M0.5,-1.5 L-4.5,-9 L-6.5,-6 L-1.5,0 Z" fill="${planeFill}"/>` +
+      `<path d="M0.5,1.5 L-4.5,9 L-6.5,6 L-1.5,0 Z" fill="${planeFill}"/>` +
+      `<path d="M-8,-1.5 L-11.5,-5 L-10,-1.5 Z" fill="${planeFill}" opacity="0.8"/>` +
+      `<path d="M-8,1.5 L-11.5,5 L-10,1.5 Z" fill="${planeFill}" opacity="0.8"/>` +
+      `</svg>`;
+
+    const marker = L.marker(originCoord as L.LatLngExpression, {
       icon: L.divIcon({
-        html: `<div id="${id}" style="display:block;pointer-events:none;will-change:transform;transform-origin:center center">${planeSvg}</div>`,
+        html: `<div id="wm-plane" style="pointer-events:none;will-change:transform;transform-origin:center center;opacity:0;transition:opacity 300ms ease-out">${planeSvg}</div>`,
         className: "",
         iconSize: [28, 22],
         iconAnchor: [14, 11],
       }),
       interactive: false,
-      zIndexOffset: 1000,
+      zIndexOffset: 2000,
     }).addTo(map);
+    planeMarkerRef.current = marker;
 
-    const PIXELS_PER_SEC = 180;
+    trailGlowRef.current = L.polyline([], { color: teal, weight: 10, opacity: 0, interactive: false }).addTo(map);
+    trailRef.current = L.polyline([], { color: teal, weight: 2.5, opacity: 0, interactive: false }).addTo(map);
 
-    const animate = (timestamp: number) => {
-      if (!isAnimating.current) return;
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      map.removeLayer(marker);
+      if (trailRef.current) { map.removeLayer(trailRef.current); trailRef.current = null; }
+      if (trailGlowRef.current) { map.removeLayer(trailGlowRef.current); trailGlowRef.current = null; }
+      planeElRef.current = null;
+    };
+  }, [flight.id, mapTheme]); // eslint-disable-line react-hooks/exhaustive-deps
 
-      const dt = lastTimeRef.current !== null ? (timestamp - lastTimeRef.current) / 1000 : 0;
-      lastTimeRef.current = timestamp;
+  // Start / pause animation based on isPlaying
+  useEffect(() => {
+    if (!isPlaying) {
+      if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null; }
+      lastTsRef.current = null;
+      return;
+    }
+    if (!dest || !ctrl || completedRef.current) return;
 
-      tRef.current = Math.min(tRef.current + (PIXELS_PER_SEC * dt) / pixelLengthRef.current, 1);
-      const t = tRef.current;
-      const rawIdx = t * (path.length - 1);
-      const idx = Math.min(Math.floor(rawIdx), path.length - 2);
-      const frac = rawIdx - idx;
+    // Fade in plane + trail
+    const planeEl = document.getElementById("wm-plane");
+    planeElRef.current = planeEl as HTMLElement | null;
+    if (planeEl) planeEl.style.opacity = "1";
+    trailRef.current?.setStyle({ opacity: 0.9 });
+    trailGlowRef.current?.setStyle({ opacity: 0.13 });
 
-      const p0 = path[idx];
-      const p1 = path[idx + 1];
-      const lat = p0[0] + (p1[0] - p0[0]) * frac;
-      const lng = p0[1] + (p1[1] - p0[1]) * frac;
+    const animate = (ts: number) => {
+      if (!isPlayingRef.current) return;
 
-      // Look 3 pts ahead for a stable bearing; SVG plane faces right so cssRotation = screenAngle
-      const aheadIdx = Math.min(idx + 3, path.length - 1);
-      const pA = map.latLngToContainerPoint(p0);
-      const pB = map.latLngToContainerPoint(path[aheadIdx]);
-      const screenAngle = Math.atan2(pB.y - pA.y, pB.x - pA.x) * (180 / Math.PI);
-      const cssRotation = screenAngle; // plane SVG points East at 0°
+      const dt = lastTsRef.current !== null ? (ts - lastTsRef.current) / 1000 : 0;
+      lastTsRef.current = ts;
 
-      const scale = 1 + 0.25 * Math.sin(t * Math.PI);
-      const glow = Math.round(6 + scale * 4);
+      // Advance progress (zoom-independent — always wall-clock based)
+      progressRef.current = Math.min(progressRef.current + (speedRef.current / BASE_DURATION_SEC) * dt, 1);
+      const eased = easeIO(progressRef.current);
 
-      if (!planeElRef.current) planeElRef.current = document.getElementById(id) as HTMLElement | null;
+      // Position on bezier curve
+      const pos = bezierAt(originCoord, ctrl!, dest!, eased);
+
+      // Screen-space tangent angle for plane rotation
+      const tA = bezierAt(originCoord, ctrl!, dest!, Math.max(0, eased - 0.02));
+      const tB = bezierAt(originCoord, ctrl!, dest!, Math.min(1, eased + 0.02));
+      const pA = map.latLngToContainerPoint(tA as L.LatLngExpression);
+      const pB = map.latLngToContainerPoint(tB as L.LatLngExpression);
+      const angle = Math.atan2(pB.y - pA.y, pB.x - pA.x) * (180 / Math.PI);
+
+      if (!planeElRef.current) planeElRef.current = document.getElementById("wm-plane") as HTMLElement | null;
       if (planeElRef.current) {
-        planeElRef.current.style.transform = `rotate(${cssRotation.toFixed(1)}deg) scale(${scale.toFixed(3)})`;
-        planeElRef.current.style.filter = `drop-shadow(0 0 ${glow}px ${teal}cc)`;
+        planeElRef.current.style.transform = `rotate(${angle.toFixed(1)}deg)`;
+        planeElRef.current.style.filter = `drop-shadow(0 0 8px ${teal}99)`;
       }
-      markerRef.current?.setLatLng([lat, lng]);
+      planeMarkerRef.current?.setLatLng(pos as L.LatLngExpression);
 
-      const trail = [...path.slice(0, idx + 1), [lat, lng] as [number, number]];
-      glowHaloRef.current?.setLatLngs(trail);
-      glowCoreRef.current?.setLatLngs(trail);
+      // Trail — slice precomputed bezier points up to current eased progress
+      const pts = ptsRef.current;
+      const trailEnd = Math.max(1, Math.ceil(eased * (pts.length - 1)));
+      const trail = pts.slice(0, trailEnd + 1);
+      trailRef.current?.setLatLngs(trail as L.LatLngExpression[]);
+      trailGlowRef.current?.setLatLngs(trail as L.LatLngExpression[]);
 
-      if (t >= 1) {
-        // Reached destination — pause 700ms then restart from origin
-        isAnimating.current = false;
-        isPausing.current = true;
-        if (onZoomRef.current) { map.off("zoom", onZoomRef.current); onZoomRef.current = null; }
-        restartTimerRef.current = setTimeout(() => {
-          restartTimerRef.current = null;
-          isPausing.current = false;
-          if (!markerRef.current) return; // user moved away during pause
-          tRef.current = 0;
-          lastTimeRef.current = null;
-          glowHaloRef.current?.setLatLngs([]);
-          glowCoreRef.current?.setLatLngs([]);
-          isAnimating.current = true;
-          pixelLengthRef.current = computePixelLength();
-          const newOnZoom = () => { pixelLengthRef.current = computePixelLength(); };
-          onZoomRef.current = newOnZoom;
-          map.on("zoom", newOnZoom);
-          animRef.current = requestAnimationFrame(animate);
-        }, 700);
+      // Update timer display directly (no re-render)
+      if (timerElRef.current) {
+        const elapsed = Math.round(eased * flightDurSec);
+        timerElRef.current.textContent = `${fmtSimTime(elapsed)} / ${fmtSimTime(flightDurSec)}`;
+      }
+
+      if (progressRef.current >= 1) {
+        completedRef.current = true;
+        // Fade out plane
+        if (planeElRef.current) {
+          planeElRef.current.style.transition = "opacity 600ms ease-in, transform 600ms ease-in";
+          planeElRef.current.style.opacity = "0";
+          planeElRef.current.style.transform = `rotate(${angle.toFixed(1)}deg) scale(1.2)`;
+        }
+        // Fade trail
+        const trailSvg = (trailRef.current as any)?._path as SVGPathElement | undefined;
+        if (trailSvg) trailSvg.style.transition = "opacity 800ms ease-in";
+        trailRef.current?.setStyle({ opacity: 0 });
+        const glowSvg = (trailGlowRef.current as any)?._path as SVGPathElement | undefined;
+        if (glowSvg) glowSvg.style.transition = "opacity 800ms ease-in";
+        trailGlowRef.current?.setStyle({ opacity: 0 });
+        setTimeout(onComplete, 850);
         return;
       }
 
       animRef.current = requestAnimationFrame(animate);
     };
 
+    lastTsRef.current = null;
     animRef.current = requestAnimationFrame(animate);
-  };
+    return () => { if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null; } };
+  }, [isPlaying, flight.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => () => {
-    if (stopDebounceRef.current) clearTimeout(stopDebounceRef.current);
-    doStop();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!destCoord) return null;
-
-  const bookUrl = `https://www.flyfrontier.com/flights/search?origin=${flight.origin}&destination=${flight.destination}&departDate=${flight.departureTime.split("T")[0]}&adults=1`;
-
-  const popup = (
-    <div style={{ fontFamily: "var(--font-bebas, sans-serif)", fontSize: 13, minWidth: 148, background: "#0d1b2e", color: "#e8f0f8", padding: 10, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)" }}>
-      <div style={{ fontSize: 15, letterSpacing: "0.08em", marginBottom: 2 }}>{flight.origin} → {flight.destination}</div>
-      <div style={{ fontSize: 22, letterSpacing: "0.04em", color: "#ff7a1a", marginBottom: 4 }}>
-        {formatPrice(flight.price, flight.currency)}
-      </div>
-      <div style={{ fontSize: 11, color: "#8ba0b8", marginBottom: 8, letterSpacing: "0.1em" }}>{flight.destinationCity?.toUpperCase()}</div>
-      <a
-        href={bookUrl} target="_blank" rel="noopener noreferrer"
-        style={{ display: "inline-block", background: "#e8f0f8", color: "#060d1a", fontSize: 11, padding: "5px 13px", borderRadius: 6, textDecoration: "none", fontWeight: 700, letterSpacing: "0.08em" }}
-      >
-        BOOK ON FRONTIER →
-      </a>
-    </div>
-  );
-
-  return (
-    <>
-      {/* Visual dashed route — not interactive */}
-      <Polyline
-        positions={path.length > 0 ? path : [originCoord, destCoord]}
-        pathOptions={{ color: hovered ? hovRoute : dimRoute, weight: 1.5, dashArray: "5 10", opacity: 1, interactive: false }}
-      />
-      {/* Wide invisible hit area for easy hovering */}
-      <Polyline
-        positions={path.length > 0 ? path : [originCoord, destCoord]}
-        pathOptions={{ color: "white", weight: 24, opacity: 0.001, interactive: true }}
-        eventHandlers={{
-          mouseover: () => { setHovered(true); startAnim(); },
-          mouseout: () => { setHovered(false); stopAnim(); },
-        }}
-      >
-        <Popup>{popup}</Popup>
-      </Polyline>
-      {/* Destination dot */}
-      <CircleMarker
-        center={destCoord}
-        radius={hovered ? 8 : 4}
-        pathOptions={{
-          color: hovered ? teal : "rgba(255,255,255,0.35)",
-          fillColor: hovered ? teal : "#0d1b2e",
-          fillOpacity: 0.9,
-          weight: hovered ? 2 : 1,
-        }}
-        eventHandlers={{
-          mouseover: () => { setHovered(true); startAnim(); },
-          mouseout: () => { setHovered(false); stopAnim(); },
-        }}
-      >
-        <Popup>{popup}</Popup>
-      </CircleMarker>
-    </>
-  );
+  return null;
 }
 
+// ─── AirportSearch (for standalone /app/map page) ──────────────────────
 function AirportSearch({ value, onChange }: { value: string; onChange: (iata: string) => void }) {
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<AirportSuggestion[]>([]);
@@ -342,11 +426,7 @@ function AirportSearch({ value, onChange }: { value: string; onChange: (iata: st
     }, 280);
   };
 
-  const pick = (r: AirportSuggestion) => {
-    setQuery(`${r.city} (${r.iataCode})`);
-    onChange(r.iataCode);
-    setOpen(false);
-  };
+  const pick = (r: AirportSuggestion) => { setQuery(`${r.city} (${r.iataCode})`); onChange(r.iataCode); setOpen(false); };
 
   return (
     <div className="relative" ref={ref}>
@@ -370,6 +450,7 @@ function AirportSearch({ value, onChange }: { value: string; onChange: (iata: st
   );
 }
 
+// ─── FlightMap ─────────────────────────────────────────────────────────
 export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }: Props) {
   const [origin, setOrigin] = useState(preloadedOrigin || "JFK");
   const [date, setDate] = useState(new Date(Date.now() + 3 * 86400000).toISOString().split("T")[0]);
@@ -378,10 +459,17 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
   const [searched, setSearched] = useState(!!preloadedFlights?.length);
   const [mapTheme, setMapTheme] = useState<"night" | "day">("night");
 
-  // Track the html[data-theme] attribute for tile switching
+  // Playback state
+  const [selectedFlight, setSelectedFlight] = useState<SearchResult | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState<Speed>(1);
+  const [hasPlayed, setHasPlayed] = useState(false);
+  const progressRef = useRef(0);
+  const timerElRef = useRef<HTMLSpanElement | null>(null);
+
+  // Theme observer
   useEffect(() => {
-    const getTheme = () =>
-      (document.documentElement.getAttribute("data-theme") || "night") as "night" | "day";
+    const getTheme = () => (document.documentElement.getAttribute("data-theme") || "night") as "night" | "day";
     setMapTheme(getTheme());
     const obs = new MutationObserver(() => setMapTheme(getTheme()));
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -415,17 +503,70 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
     setLoading(false);
   };
 
+  const handleSelect = (id: string) => {
+    const flight = flights.find((f) => f.id === id);
+    if (!flight) return;
+    if (flight.id === selectedFlight?.id) return;
+
+    // Fade out existing plane before switching
+    const planeEl = document.getElementById("wm-plane");
+    if (planeEl) {
+      planeEl.style.transition = "opacity 280ms ease-in";
+      planeEl.style.opacity = "0";
+    }
+
+    setTimeout(() => {
+      setIsPlaying(false);
+      progressRef.current = 0;
+      setHasPlayed(false);
+      setSelectedFlight(flight);
+      // Reset timer display
+      if (timerElRef.current) {
+        timerElRef.current.textContent = `00:00 / ${fmtSimTime(parseIsoDur(flight.duration))}`;
+      }
+    }, planeEl ? 300 : 0);
+  };
+
+  const handlePlay = () => {
+    if (!hasPlayed) setHasPlayed(true);
+    setIsPlaying(true);
+  };
+
+  const handlePause = () => setIsPlaying(false);
+
+  const handleComplete = () => {
+    setIsPlaying(false);
+    progressRef.current = 0;
+    setHasPlayed(false);
+    // Keep selectedFlight so the panel stays visible, just reset to ▶
+  };
+
+  const handleDeselect = () => {
+    setIsPlaying(false);
+    progressRef.current = 0;
+    setHasPlayed(false);
+    setSelectedFlight(null);
+  };
+
   const originCoord = AIRPORT_COORDS[origin];
   const destCoords = flights.filter((f) => AIRPORT_COORDS[f.destination]).map((f) => AIRPORT_COORDS[f.destination]);
-
   const tileUrl = mapTheme === "day"
     ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
     : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-
   const teal = mapTheme === "day" ? "#0d9488" : "#00d4b4";
+  const flightDurSec = selectedFlight ? parseIsoDur(selectedFlight.duration) : 0;
 
   return (
     <div className="h-full w-full relative" style={{ minHeight: 480 }}>
+      {/* CSS keyframes for arc slow-dash animation */}
+      <style>{`
+        @keyframes wm-dash { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+        .wm-popup .leaflet-popup-content-wrapper,
+        .wm-popup .leaflet-popup-tip { background: transparent !important; box-shadow: none !important; }
+        .wm-popup .leaflet-popup-content { margin: 0 !important; }
+      `}</style>
+
+      {/* Standalone map search controls (not shown when preloaded) */}
       {!preloadedFlights && (
         <div
           className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-3 px-4 py-2.5 rounded-xl shadow-lg"
@@ -452,7 +593,6 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
         style={{ height: "100%", width: "100%", minHeight: 480, background: mapTheme === "day" ? "#f8f6f0" : "#060d1a" }}
         zoomControl={false}
       >
-        {/* Tile layer switches with theme — key forces remount */}
         <TileLayer
           key={mapTheme}
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -461,32 +601,131 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
 
         {destCoords.length > 1 && <MapFit coords={destCoords} />}
 
-        {/* Origin — glowing dot with soft outer ring */}
-        {originCoord && (
-          <>
-            <CircleMarker
-              center={originCoord}
-              radius={16}
-              pathOptions={{ color: teal, fillColor: "transparent", fillOpacity: 0, weight: 1, opacity: 0.2, interactive: false }}
-            />
-            <CircleMarker
-              center={originCoord}
-              radius={7}
-              pathOptions={{ color: teal, fillColor: teal, fillOpacity: 1, weight: 0 }}
-            >
-              <Popup>
-                <div style={{ background: "#0d1b2e", color: "#e8f0f8", padding: "8px 12px", borderRadius: 8, fontSize: 13, border: "1px solid rgba(255,255,255,0.1)" }}>
-                  <strong>{origin}</strong> — your origin
-                </div>
-              </Popup>
-            </CircleMarker>
-          </>
-        )}
 
+        {/* Route arcs */}
         {originCoord && flights.filter((f) => AIRPORT_COORDS[f.destination]).map((f) => (
-          <RouteLayer key={f.id} flight={f} originCoord={originCoord} mapTheme={mapTheme} />
+          <RouteArc
+            key={f.id}
+            flight={f}
+            originCoord={originCoord}
+            selectedId={selectedFlight?.id ?? null}
+            onSelect={handleSelect}
+            mapTheme={mapTheme}
+          />
         ))}
+
+        {/* Origin dot (rendered last so it's on top) */}
+        {originCoord && <OriginMarker coord={originCoord} teal={teal} origin={origin} />}
+
+        {/* Playback layer — remounts when selected flight changes */}
+        {selectedFlight && originCoord && (
+          <PlaybackLayer
+            key={selectedFlight.id}
+            flight={selectedFlight}
+            originCoord={originCoord}
+            isPlaying={isPlaying}
+            speed={speed}
+            mapTheme={mapTheme}
+            progressRef={progressRef}
+            timerElRef={timerElRef}
+            onComplete={handleComplete}
+          />
+        )}
       </MapContainer>
+
+      {/* Play / Timer UI overlay */}
+      <div
+        style={{
+          position: "absolute", bottom: 16, left: 16, zIndex: 1000,
+          display: "flex", alignItems: "center", gap: 10,
+          backgroundColor: mapTheme === "day" ? "rgba(248,246,240,0.95)" : "rgba(13,27,46,0.95)",
+          border: "1px solid var(--border-2)",
+          borderRadius: 12, padding: "10px 14px",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.22)",
+          backdropFilter: "blur(12px)",
+          opacity: selectedFlight ? 1 : 0,
+          transition: "opacity 250ms ease-out",
+          pointerEvents: selectedFlight ? "auto" : "none",
+        }}
+      >
+        {/* Play / Pause */}
+        <button
+          onClick={isPlaying ? handlePause : handlePlay}
+          style={{
+            width: 36, height: 36, borderRadius: "50%",
+            backgroundColor: teal, color: "#fff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            border: "none", cursor: "pointer", flexShrink: 0, fontSize: 13,
+            transition: "transform 200ms ease-out, opacity 200ms ease-out",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.08)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+        >
+          {isPlaying ? "⏸" : "▶"}
+        </button>
+
+        {/* Route label */}
+        <div style={{ minWidth: 90 }}>
+          <div style={{ fontFamily: "var(--font-bebas)", fontSize: 14, letterSpacing: "0.1em", color: mapTheme === "day" ? "#0f1f2e" : "#e8f0f8", lineHeight: 1.1 }}>
+            {selectedFlight?.origin} → {selectedFlight?.destination}
+          </div>
+          <div style={{ fontSize: 10, color: mapTheme === "day" ? "#78716c" : "#8ba0b8", marginTop: 1 }}>
+            {selectedFlight?.destinationCity}
+          </div>
+        </div>
+
+        {/* Separator */}
+        <div style={{ width: 1, height: 28, backgroundColor: mapTheme === "day" ? "rgba(15,31,46,0.15)" : "rgba(255,255,255,0.12)" }} />
+
+        {/* Timer */}
+        <div style={{ fontFamily: "var(--font-bebas)", fontSize: 13, letterSpacing: "0.08em", color: mapTheme === "day" ? "#57534e" : "#8ba0b8", minWidth: 90, whiteSpace: "nowrap" }}>
+          <span ref={timerElRef}>{`00:00 / ${fmtSimTime(flightDurSec)}`}</span>
+        </div>
+
+        {/* Speed buttons — revealed after first play */}
+        <div
+          style={{
+            display: "flex", gap: 4,
+            opacity: hasPlayed ? 1 : 0,
+            transition: "opacity 200ms ease-out",
+            pointerEvents: hasPlayed ? "auto" : "none",
+          }}
+        >
+          {SPEEDS.map((s) => (
+            <button
+              key={s}
+              onClick={() => setSpeed(s)}
+              style={{
+                fontFamily: "var(--font-bebas)", fontSize: 11, letterSpacing: "0.06em",
+                padding: "4px 8px", borderRadius: 5,
+                backgroundColor: speed === s ? teal : "transparent",
+                color: speed === s ? "#fff" : mapTheme === "day" ? "#78716c" : "#8ba0b8",
+                border: `1px solid ${speed === s ? teal : mapTheme === "day" ? "rgba(15,31,46,0.2)" : "rgba(255,255,255,0.14)"}`,
+                cursor: "pointer",
+                transition: "all 150ms ease",
+              }}
+            >
+              {s}×
+            </button>
+          ))}
+        </div>
+
+        {/* Close / deselect */}
+        <button
+          onClick={handleDeselect}
+          style={{
+            width: 22, height: 22, borderRadius: "50%", border: "none",
+            backgroundColor: "transparent", cursor: "pointer", flexShrink: 0,
+            color: mapTheme === "day" ? "#78716c" : "#8ba0b8", fontSize: 14, lineHeight: 1,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            opacity: 0.6, transition: "opacity 150ms ease",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.6"; }}
+        >
+          ×
+        </button>
+      </div>
 
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -499,4 +738,26 @@ export default function FlightMap({ preloadedFlights, origin: preloadedOrigin }:
       )}
     </div>
   );
+}
+
+// ─── OriginMarker ──────────────────────────────────────────────────────
+// Separate component so it uses useMap() cleanly inside MapContainer
+function OriginMarker({ coord, teal, origin }: { coord: [number, number]; teal: string; origin: string }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const ring = L.circleMarker(coord as L.LatLngExpression, {
+      radius: 16, color: teal, fillColor: "transparent", fillOpacity: 0, weight: 1, opacity: 0.2, interactive: false,
+    }).addTo(map);
+    const dot = L.circleMarker(coord as L.LatLngExpression, {
+      radius: 7, color: teal, fillColor: teal, fillOpacity: 1, weight: 0,
+    }).addTo(map);
+    dot.bindPopup(
+      `<div style="background:#0d1b2e;color:#e8f0f8;padding:8px 12px;border-radius:8px;font-size:13px;border:1px solid rgba(255,255,255,0.1)"><strong>${origin}</strong> — your origin</div>`,
+      { className: "wm-popup" }
+    );
+    return () => { map.removeLayer(ring); map.removeLayer(dot); };
+  }, [coord, teal, origin, map]);
+
+  return null;
 }

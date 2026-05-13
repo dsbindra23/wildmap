@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 
 interface Place { iataCode: string; city: string; name: string; }
 
-// Boarding-pass barcode — decorative SVG, ~50 bars
 function Barcode() {
-  // pairs: [x, width] for each bar (computed from a realistic EAN-style pattern)
   const bars: [number, number][] = [
     [0,3],[4,1],[7,2],[10,1],[12,1],[15,2],[18,1],[21,1],[23,3],[27,1],
     [30,2],[33,1],[35,1],[38,2],[41,1],[44,1],[46,3],[50,1],[53,2],[56,1],
@@ -16,9 +14,9 @@ function Barcode() {
     [117,2],[120,1],[123,1],[125,2],[128,1],[131,1],[133,2],[136,1],[139,3],[143,2],
   ];
   return (
-    <svg viewBox="0 0 146 34" style={{ width: "100%", height: 34, display: "block" }} aria-hidden="true">
+    <svg viewBox="0 0 146 30" style={{ width: "100%", height: 30, display: "block" }} aria-hidden="true">
       {bars.map(([x, w]) => (
-        <rect key={x} x={x} y={0} width={w} height={34} fill="var(--fg)" opacity={0.65} />
+        <rect key={x} x={x} y={0} width={w} height={30} fill="var(--fg)" opacity={0.55} />
       ))}
     </svg>
   );
@@ -80,7 +78,7 @@ export default function TicketHero() {
         .wm-ticket-input {
           font-family: var(--font-serif);
           font-weight: 900;
-          font-size: 28px;
+          font-size: 26px;
           color: var(--fg);
           background: transparent;
           border: none;
@@ -90,20 +88,19 @@ export default function TicketHero() {
           caret-color: var(--fg);
           display: block;
         }
-        .wm-ticket-input::placeholder { color: var(--fg-3); font-size: 20px; font-weight: 700; }
+        .wm-ticket-input::placeholder { color: var(--fg-3); font-size: 18px; font-weight: 700; }
         @media (max-width: 640px) {
-          .wm-ticket-input { font-size: 22px !important; }
-          .wm-ticket-input::placeholder { font-size: 15px; }
-          .wm-ticket-wrapper { height: 360px !important; }
-          .wm-ticket-front { height: 300px !important; }
-          .wm-ticket-explore { padding: 10px 16px !important; font-size: 12px !important; }
+          .wm-ticket-input { font-size: 20px !important; }
+          .wm-ticket-input::placeholder { font-size: 14px; }
+          .wm-ticket-wrapper { height: 420px !important; }
+          .wm-ticket-front { height: 350px !important; }
+          .wm-ticket-explore { padding: 10px 14px !important; font-size: 12px !important; }
         }
       `}</style>
 
-      {/* Ticket stack */}
       <div
         className="wm-ticket-wrapper"
-        style={{ position: "relative", height: 320 }}
+        style={{ position: "relative", height: 380 }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
@@ -128,14 +125,15 @@ export default function TicketHero() {
         <div
           className="wm-ticket-front"
           style={{
-            position: "absolute", top: 50, left: 0, right: 0, height: 260,
+            position: "absolute", top: 50, left: 0, right: 0, height: 318,
             zIndex: 3,
             backgroundColor: "var(--bg-2)", border: "1.5px solid var(--border-2)",
             borderRadius: 10, boxShadow: "0 16px 40px rgba(15,31,46,0.12)",
+            overflow: "hidden",
           }}
         >
           {/* ── Top strip: boarding-pass header ── */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 22px", borderBottom: DASH }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 22px", borderBottom: DASH }}>
             <div>
               <div style={LABEL}>Passenger</div>
               <div style={VALUE}>Mr. GoWild</div>
@@ -152,89 +150,94 @@ export default function TicketHero() {
               </div>
             </div>
           </div>
-          {/* ── Seat / Gate strip ── */}
-          <div style={{ display: "flex", gap: 28, padding: "8px 22px", borderBottom: DASH }}>
+
+          {/* ── Main section: search + barcode ── */}
+          <div style={{ padding: "16px 26px 14px" }}>
+            {/* Search row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div
+                onClick={() => inputRef.current?.focus()}
+                style={{
+                  width: 42, height: 42, borderRadius: "50%",
+                  backgroundColor: "var(--fg)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0, cursor: "pointer",
+                }}
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                </svg>
+              </div>
+              <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
+                <div style={{ ...LABEL, marginBottom: 3 }}>Departing from</div>
+                <input
+                  ref={inputRef}
+                  className="wm-ticket-input"
+                  value={query}
+                  onChange={(e) => handleChange(e.target.value)}
+                  onFocus={() => results.length > 0 && setOpen(true)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                  placeholder="City or airport"
+                />
+                {open && results.length > 0 && (
+                  <div style={{
+                    position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 9999,
+                    backgroundColor: "var(--bg-2)", borderRadius: 10, overflow: "hidden",
+                    boxShadow: "0 8px 32px rgba(15,31,46,0.15)", border: "1px solid var(--border-2)",
+                  }}>
+                    {results.map((r) => (
+                      <button
+                        key={r.iataCode} type="button" onClick={() => pick(r)}
+                        className="border-b last:border-0"
+                        style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", width: "100%", borderColor: "var(--border)", background: "none", cursor: "pointer" }}
+                      >
+                        <span style={{ fontWeight: 700, fontSize: 14, color: "var(--fg)", width: 38, flexShrink: 0, letterSpacing: "0.04em" }}>{r.iataCode}</span>
+                        <span style={{ fontSize: 14, color: "var(--fg-2)" }}>{r.city}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                className="wm-ticket-explore"
+                onClick={handleSubmit}
+                style={{
+                  fontFamily: "var(--font-bebas)", letterSpacing: "0.15em", fontSize: 14,
+                  padding: "12px 20px", borderRadius: 8,
+                  backgroundColor: "var(--fg)", color: "var(--bg)",
+                  border: "none", cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
+                  transition: "opacity 0.2s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.82")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+              >
+                EXPLORE →
+              </button>
+            </div>
+
+            {/* Barcode — inside the search section */}
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+              <Barcode />
+              <div style={{
+                textAlign: "center", marginTop: 5,
+                fontSize: 10, letterSpacing: "0.22em", color: "var(--fg-3)",
+                fontVariantNumeric: "tabular-nums",
+              }}>
+                1 0613232398
+              </div>
+            </div>
+          </div>
+
+          {/* ── Bottom strip: Seat / Gate ── */}
+          <div style={{ borderTop: DASH, padding: "10px 22px", display: "flex", gap: 32, alignItems: "center" }}>
             <div>
               <div style={LABEL}>Seat</div>
               <div style={{ ...VALUE, fontSize: 15 }}>11A</div>
             </div>
+            <div style={{ width: 1, height: 28, backgroundColor: "var(--border-2)" }} />
             <div>
               <div style={LABEL}>Gate</div>
               <div style={{ ...VALUE, fontSize: 15 }}>D23</div>
-            </div>
-          </div>
-
-          {/* ── Main section: search ── */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "20px 26px" }}>
-            <div
-              onClick={() => inputRef.current?.focus()}
-              style={{
-                width: 44, height: 44, borderRadius: "50%",
-                backgroundColor: "var(--fg)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0, cursor: "pointer",
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-              </svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
-              <div style={{ ...LABEL, marginBottom: 3 }}>Departing from</div>
-              <input
-                ref={inputRef}
-                className="wm-ticket-input"
-                value={query}
-                onChange={(e) => handleChange(e.target.value)}
-                onFocus={() => results.length > 0 && setOpen(true)}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                placeholder="City or airport"
-              />
-              {open && results.length > 0 && (
-                <div style={{
-                  position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 9999,
-                  backgroundColor: "var(--bg-2)", borderRadius: 10, overflow: "hidden",
-                  boxShadow: "0 8px 32px rgba(15,31,46,0.15)", border: "1px solid var(--border-2)",
-                }}>
-                  {results.map((r) => (
-                    <button
-                      key={r.iataCode} type="button" onClick={() => pick(r)}
-                      className="border-b last:border-0"
-                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", width: "100%", borderColor: "var(--border)", background: "none", cursor: "pointer" }}
-                    >
-                      <span style={{ fontWeight: 700, fontSize: 14, color: "var(--fg)", width: 38, flexShrink: 0, letterSpacing: "0.04em" }}>{r.iataCode}</span>
-                      <span style={{ fontSize: 14, color: "var(--fg-2)" }}>{r.city}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <button
-              className="wm-ticket-explore"
-              onClick={handleSubmit}
-              style={{
-                fontFamily: "var(--font-bebas)", letterSpacing: "0.15em", fontSize: 14,
-                padding: "13px 22px", borderRadius: 8,
-                backgroundColor: "var(--fg)", color: "var(--bg)",
-                border: "none", cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
-                transition: "opacity 0.2s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.82")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-            >
-              EXPLORE →
-            </button>
-          </div>
-
-          {/* ── Bottom: barcode ── */}
-          <div style={{ borderTop: DASH, padding: "14px 22px 16px" }}>
-            <Barcode />
-            <div style={{
-              textAlign: "center", marginTop: 7,
-              fontSize: 10, letterSpacing: "0.25em", color: "var(--fg-3)",
-              fontVariantNumeric: "tabular-nums",
-            }}>
-              1 0613232398
             </div>
           </div>
         </div>
