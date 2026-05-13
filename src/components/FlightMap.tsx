@@ -88,7 +88,7 @@ function fmtSimTime(secs: number): string {
 
 // ─── Constants ─────────────────────────────────────────────────────────
 const BASE_DURATION_SEC = 30; // wall-clock seconds at 1× speed for full arc
-const SPEEDS = [1, 8, 16, 64, 128] as const;
+const SPEEDS = [1, 2, 4, 8] as const;
 type Speed = (typeof SPEEDS)[number];
 
 interface Props { preloadedFlights?: SearchResult[]; origin?: string; }
@@ -130,9 +130,9 @@ function RouteArc({
     const ctrl = bezierCtrl(originCoord, dest);
     const pts = bezierPts(originCoord, ctrl, dest);
 
-    // Visible arc — dashed, at rest
+    // Visible arc — dashed, at rest (55% opacity so always clearly readable)
     const arc = L.polyline(pts as L.LatLngExpression[], {
-      color: teal, weight: 1.5, opacity: 0.35, dashArray: "4 6", interactive: false,
+      color: teal, weight: 2, opacity: 0.55, dashArray: "4 6", interactive: false,
     }).addTo(map);
     arcRef.current = arc;
 
@@ -159,13 +159,13 @@ function RouteArc({
       const isSelected = arcRef.current && (arcRef.current as any).__wmSelected;
       const isFaded = arcRef.current && (arcRef.current as any).__wmFaded;
       const p = (arcRef.current as any)?._path as SVGPathElement | undefined;
-      if (p) p.style.opacity = isSelected ? "1" : isFaded ? "0.12" : "0.35";
+      if (p) p.style.opacity = isSelected ? "1" : isFaded ? "0.2" : "0.55";
       dotRef.current?.setRadius(isSelected ? 6 : 5);
     });
 
     // Destination dot
     const dot = L.circleMarker(dest as L.LatLngExpression, {
-      radius: 5, color: teal, weight: 1.5, fillColor: bgFill, fillOpacity: 0.9, opacity: 0.4,
+      radius: 5, color: teal, weight: 1.5, fillColor: bgFill, fillOpacity: 0.9, opacity: 0.6,
     }).addTo(map);
     dotRef.current = dot;
     dot.on("click", () => onSelect(flight.id));
@@ -206,17 +206,17 @@ function RouteArc({
     if (svgPath) {
       if (isSelected) {
         svgPath.style.opacity = "1";
-        svgPath.style.strokeWidth = "2px";
+        svgPath.style.strokeWidth = "2.5px";
         svgPath.style.strokeDasharray = "none";
         svgPath.style.animation = "none";
       } else if (isFaded) {
-        svgPath.style.opacity = "0.12";
-        svgPath.style.strokeWidth = "1.5px";
+        svgPath.style.opacity = "0.2";
+        svgPath.style.strokeWidth = "2px";
         svgPath.style.strokeDasharray = "4 6";
         svgPath.style.animation = "wm-dash 40s linear infinite";
       } else {
-        svgPath.style.opacity = "0.35";
-        svgPath.style.strokeWidth = "1.5px";
+        svgPath.style.opacity = "0.55";
+        svgPath.style.strokeWidth = "2px";
         svgPath.style.strokeDasharray = "4 6";
         svgPath.style.animation = "wm-dash 40s linear infinite";
       }
@@ -281,21 +281,19 @@ function PlaybackLayer({
     ptsRef.current = bezierPts(originCoord, ctrl, dest, 80);
     completedRef.current = false;
 
+    // WildMap logo plane — same Lucide Plane path used in the Navbar (fill variant for map)
+    // Natural orientation: points upper-right (~−45° from horizontal), so cssRotation = screenAngle + 45
     const planeSvg =
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -9 24 18" width="28" height="22" style="display:block">` +
-      `<path d="M9,0 L-4,-2 L-9,-1.5 L-10.5,0 L-9,1.5 L-4,2 Z" fill="${planeFill}"/>` +
-      `<path d="M0.5,-1.5 L-4.5,-9 L-6.5,-6 L-1.5,0 Z" fill="${planeFill}"/>` +
-      `<path d="M0.5,1.5 L-4.5,9 L-6.5,6 L-1.5,0 Z" fill="${planeFill}"/>` +
-      `<path d="M-8,-1.5 L-11.5,-5 L-10,-1.5 Z" fill="${planeFill}" opacity="0.8"/>` +
-      `<path d="M-8,1.5 L-11.5,5 L-10,1.5 Z" fill="${planeFill}" opacity="0.8"/>` +
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="30" height="30" style="display:block">` +
+      `<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" fill="${planeFill}"/>` +
       `</svg>`;
 
     const marker = L.marker(originCoord as L.LatLngExpression, {
       icon: L.divIcon({
-        html: `<div id="wm-plane" style="pointer-events:none;will-change:transform;transform-origin:center center;opacity:0;transition:opacity 300ms ease-out">${planeSvg}</div>`,
+        html: `<div id="wm-plane" style="pointer-events:none;will-change:transform;transform-origin:center center;opacity:0;transition:opacity 350ms ease-out;image-rendering:crisp-edges">${planeSvg}</div>`,
         className: "",
-        iconSize: [28, 22],
-        iconAnchor: [14, 11],
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
       }),
       interactive: false,
       zIndexOffset: 2000,
@@ -350,10 +348,12 @@ function PlaybackLayer({
       const pB = map.latLngToContainerPoint(tB as L.LatLngExpression);
       const angle = Math.atan2(pB.y - pA.y, pB.x - pA.x) * (180 / Math.PI);
 
+      // Lucide Plane points upper-right at 0° — offset by +45 to align nose with direction of travel
+      const cssAngle = (angle + 45).toFixed(2);
       if (!planeElRef.current) planeElRef.current = document.getElementById("wm-plane") as HTMLElement | null;
       if (planeElRef.current) {
-        planeElRef.current.style.transform = `rotate(${angle.toFixed(1)}deg)`;
-        planeElRef.current.style.filter = `drop-shadow(0 0 8px ${teal}99)`;
+        planeElRef.current.style.transform = `rotate(${cssAngle}deg)`;
+        planeElRef.current.style.filter = `drop-shadow(0 0 10px ${teal}bb)`;
       }
       planeMarkerRef.current?.setLatLng(pos as L.LatLngExpression);
 

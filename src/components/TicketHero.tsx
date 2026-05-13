@@ -5,22 +5,6 @@ import { useRouter } from "next/navigation";
 
 interface Place { iataCode: string; city: string; name: string; }
 
-function Barcode() {
-  const bars: [number, number][] = [
-    [0,3],[4,1],[7,2],[10,1],[12,1],[15,2],[18,1],[21,1],[23,3],[27,1],
-    [30,2],[33,1],[35,1],[38,2],[41,1],[44,1],[46,3],[50,1],[53,2],[56,1],
-    [58,1],[61,1],[63,2],[66,3],[70,1],[73,1],[75,2],[78,1],[81,3],[85,1],
-    [87,2],[90,1],[93,1],[95,2],[98,3],[102,1],[105,2],[108,1],[110,3],[114,1],
-    [117,2],[120,1],[123,1],[125,2],[128,1],[131,1],[133,2],[136,1],[139,3],[143,2],
-  ];
-  return (
-    <svg viewBox="0 0 146 30" style={{ width: "100%", height: 30, display: "block" }} aria-hidden="true">
-      {bars.map(([x, w]) => (
-        <rect key={x} x={x} y={0} width={w} height={30} fill="var(--fg)" opacity={0.55} />
-      ))}
-    </svg>
-  );
-}
 
 export default function TicketHero() {
   const router = useRouter();
@@ -215,29 +199,36 @@ export default function TicketHero() {
               </button>
             </div>
 
-            {/* Barcode — inside the search section */}
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
-              <Barcode />
-              <div style={{
-                textAlign: "center", marginTop: 5,
-                fontSize: 10, letterSpacing: "0.22em", color: "var(--fg-3)",
-                fontVariantNumeric: "tabular-nums",
-              }}>
+          </div>
+
+          {/* ── Bottom strip: Seat · Barcode · Gate (real boarding-pass layout) ── */}
+          <div style={{ borderTop: DASH, padding: "9px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            {/* Left: Seat */}
+            <div style={{ flexShrink: 0 }}>
+              <div style={LABEL}>Seat</div>
+              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 20, letterSpacing: "0.08em", color: "var(--fg)", lineHeight: 1 }}>11A</div>
+            </div>
+            {/* Center: Barcode */}
+            <div style={{ flex: 1, minWidth: 0, maxWidth: 220 }}>
+              <svg viewBox="0 0 146 22" style={{ width: "100%", height: 22, display: "block" }} aria-hidden="true">
+                {([
+                  [0,3],[4,1],[7,2],[10,1],[12,1],[15,2],[18,1],[21,1],[23,3],[27,1],
+                  [30,2],[33,1],[35,1],[38,2],[41,1],[44,1],[46,3],[50,1],[53,2],[56,1],
+                  [58,1],[61,1],[63,2],[66,3],[70,1],[73,1],[75,2],[78,1],[81,3],[85,1],
+                  [87,2],[90,1],[93,1],[95,2],[98,3],[102,1],[105,2],[108,1],[110,3],[114,1],
+                  [117,2],[120,1],[123,1],[125,2],[128,1],[131,1],[133,2],[136,1],[139,3],[143,2],
+                ] as [number,number][]).map(([x, w]) => (
+                  <rect key={x} x={x} y={0} width={w} height={22} fill="var(--fg)" opacity={0.5} />
+                ))}
+              </svg>
+              <div style={{ textAlign: "center", marginTop: 2, fontSize: 8, letterSpacing: "0.18em", color: "var(--fg-3)", fontVariantNumeric: "tabular-nums" }}>
                 1 0613232398
               </div>
             </div>
-          </div>
-
-          {/* ── Bottom strip: Seat / Gate ── */}
-          <div style={{ borderTop: DASH, padding: "10px 22px", display: "flex", gap: 32, alignItems: "center" }}>
-            <div>
-              <div style={LABEL}>Seat</div>
-              <div style={{ ...VALUE, fontSize: 15 }}>11A</div>
-            </div>
-            <div style={{ width: 1, height: 28, backgroundColor: "var(--border-2)" }} />
-            <div>
+            {/* Right: Gate */}
+            <div style={{ flexShrink: 0, textAlign: "right" }}>
               <div style={LABEL}>Gate</div>
-              <div style={{ ...VALUE, fontSize: 15 }}>D23</div>
+              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 20, letterSpacing: "0.08em", color: "var(--fg)", lineHeight: 1 }}>D23</div>
             </div>
           </div>
         </div>
