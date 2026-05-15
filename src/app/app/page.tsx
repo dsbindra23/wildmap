@@ -120,7 +120,7 @@ function ListRow({ flight }: { flight: SearchResult }) {
           <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{formatTime(flight.departureTime)}</div>
         </div>
         <div className="flex-1 flex flex-col items-center gap-1">
-          <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{formatDuration(flight.duration)}</div>
+          <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{formatDuration(flight.duration, flight.departureTime, flight.arrivalTime)}</div>
           <div className="w-full flex items-center gap-1">
             <div className="flex-1 h-px" style={{ backgroundColor: "var(--border-2)" }} />
             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
@@ -184,7 +184,7 @@ function GridCard({ flight }: { flight: SearchResult }) {
           {vibeLabel(flight.destination)}
         </div>
         <div className="text-right">
-          <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{formatDuration(flight.duration)}</div>
+          <div style={{ fontSize: 12, color: "var(--fg-3)" }}>{formatDuration(flight.duration, flight.departureTime, flight.arrivalTime)}</div>
           <div style={{ fontSize: 12, color: "var(--fg-2)", marginTop: 2 }}>
             {formatTime(flight.departureTime)} → {formatTime(flight.arrivalTime)}
           </div>
@@ -317,7 +317,6 @@ function ExploreContent() {
               backgroundColor: "var(--bg-2)",
               border: "1px solid var(--border)",
               color: "var(--fg-2)",
-              fontFamily: "var(--font-bebas)",
               fontSize: 13,
             }}
           />

@@ -59,7 +59,7 @@ export default function TicketHero() {
     marginBottom: 4, textTransform: "uppercase",
   };
   const VALUE: React.CSSProperties = {
-    fontSize: 13, fontWeight: 600, color: "var(--fg)", letterSpacing: "0.04em",
+    fontSize: 13, fontWeight: 400, color: "var(--fg-2)", letterSpacing: "0.03em",
   };
 
   const BARS: [number, number][] = [
@@ -87,6 +87,11 @@ export default function TicketHero() {
           display: block;
         }
         .wm-ticket-input::placeholder { color: var(--fg-3); font-size: 19px; font-weight: 700; }
+        @keyframes wm-boarding-blink {
+          0%, 100% { opacity: 1; box-shadow: 0 0 6px #22c55e; }
+          50% { opacity: 0.2; box-shadow: 0 0 2px #22c55e44; }
+        }
+        .wm-boarding-dot { animation: wm-boarding-blink 2.4s ease-in-out infinite; }
         @media (max-width: 640px) {
           .wm-ticket-input { font-size: 20px !important; }
           .wm-ticket-input::placeholder { font-size: 14px; }
@@ -145,14 +150,14 @@ export default function TicketHero() {
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={LABEL}>Flight</div>
-              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 18, letterSpacing: "0.12em", color: "var(--fg)" }}>
-                W1 DSB
+              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 18, letterSpacing: "0.12em", color: "var(--fg-2)" }}>
+                F9 1507
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={LABEL}>Status</div>
               <div style={{ display: "flex", alignItems: "center", gap: 5, justifyContent: "flex-end" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: "#22c55e", display: "inline-block", boxShadow: "0 0 6px #22c55e" }} />
+                <span className="wm-boarding-dot" style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: "#22c55e", display: "inline-block", boxShadow: "0 0 6px #22c55e" }} />
                 <span style={{ ...VALUE, color: "#22c55e" }}>Boarding</span>
               </div>
             </div>
@@ -230,7 +235,7 @@ export default function TicketHero() {
             {/* Seat — left */}
             <div style={{ flexShrink: 0, minWidth: 48 }}>
               <div style={LABEL}>Seat</div>
-              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 22, letterSpacing: "0.06em", color: "var(--fg)", lineHeight: 1 }}>
+              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 22, letterSpacing: "0.06em", color: "var(--fg-2)", lineHeight: 1 }}>
                 11A
               </div>
             </div>
@@ -254,7 +259,7 @@ export default function TicketHero() {
             {/* Gate — right */}
             <div style={{ flexShrink: 0, minWidth: 48, textAlign: "right" }}>
               <div style={LABEL}>Gate</div>
-              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 22, letterSpacing: "0.06em", color: "var(--fg)", lineHeight: 1 }}>
+              <div style={{ fontFamily: "var(--font-bebas)", fontSize: 22, letterSpacing: "0.06em", color: "var(--fg-2)", lineHeight: 1 }}>
                 D23
               </div>
             </div>
